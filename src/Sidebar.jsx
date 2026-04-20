@@ -32,18 +32,54 @@ function Sidebar() {
             </NavLink>
           </li>
           <li className="nav-item">
-            <a className="nav-link" href="#">
+            <NavLink
+              to="/Sales"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+            >
               Sales
-            </a>
+            </NavLink>
           </li>
           <li className="nav-item">
-            <a className="nav-link" href="#">
+            <NavLink
+              to="/PurchaseOrders"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+            >
               Purchase Orders
-            </a>
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink
+              to="/Accounts"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+            >
+              Accounts
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink
+              to="/Suppliers"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+            >
+              Suppliers
+            </NavLink>
           </li>
         </ul>
         <div>
-          <h1 className="display-6 text-center">test</h1>
+          <button type="button" className="btn btn-danger w-100">
+            Logout
+          </button>
         </div>
       </div>
     </div>
