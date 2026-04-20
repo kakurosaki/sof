@@ -1,0 +1,19 @@
+.side-bar {
+  background-color: #323762;
+  color: white;
+}
+.nav-link.active {
+  background-color: #0dc972 !important;
+}
+.nav a {
+  color: white;
+  border-radius: 4px !important;
+}
+.page {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.page.fade-out {
+  opacity: 0;
+}

@@ -1,0 +1,10 @@
+.table-box {
+  border: rgba(33, 37, 41, 0.25) solid 1px;
+  border-radius: 2px;
+}
+.table-box table {
+  border-top: rgba(33, 37, 41, 0.25) solid 1px;
+}
+tr{
+  text-align: center;
+}

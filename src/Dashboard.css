@@ -1,0 +1,24 @@
+.numbercard {
+  border: rgba(33, 37, 41, 0.25) solid 1px;
+  background-color: white;
+}
+.numbercards {
+  gap: 1.5em;
+}
+.dash-date .btn {
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+  border: rgba(33, 37, 41, 0.25) solid 1px;
+  border-radius: 4px;
+}
+.graph {
+  border: rgba(33, 37, 41, 0.25) solid 1px;
+  border-radius: 4px;
+  background-color: white;
+}
+.dual-graph {
+  gap: 1.5em;
+}
+.dashboard {
+  background-color: whitesmoke;
+}
