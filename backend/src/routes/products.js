@@ -3,10 +3,41 @@ import { pool } from "../db.js";
 
 const router = Router();
 
+function toTrimmedString(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function toNonNegativeNumber(value, fallback = null) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function toNonNegativeInteger(value, fallback = null) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function parseActiveQueryParam(raw) {
+  if (raw === undefined) return true;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw === "all") return null;
+  return "invalid";
+}
+
 router.get("/", async (req, res) => {
   const search = req.query.search?.trim() || "";
   const category = req.query.category?.trim() || "";
-  const active = req.query.active === "false" ? false : true;
+  const active = parseActiveQueryParam(req.query.active);
+  if (active === "invalid") {
+    return res.status(400).json({ error: 'active must be "true", "false", or "all"' });
+  }
 
   const page = Math.max(parseInt(req.query.page || "1", 10), 1);
   const limit = Math.min(Math.max(parseInt(req.query.limit || "20", 10), 1), 100);
@@ -15,9 +46,10 @@ router.get("/", async (req, res) => {
   const where = [];
   const values = [];
 
-  // is_active
-  values.push(active);
-  where.push(`p.is_active = $${values.length}`);
+  if (active !== null) {
+    values.push(active);
+    where.push(`p.is_active = $${values.length}`);
+  }
 
   if (search) {
     values.push(`%${search}%`);
@@ -32,6 +64,11 @@ router.get("/", async (req, res) => {
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   try {
+    values.push(limit);
+    const limitParam = `$${values.length}`;
+    values.push(offset);
+    const offsetParam = `$${values.length}`;
+
     const result = await pool.query(
       `
       SELECT
@@ -44,7 +81,7 @@ router.get("/", async (req, res) => {
       LEFT JOIN suppliers s ON s.id = p.supplier_id
       ${whereSql}
       ORDER BY p.id DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${limitParam} OFFSET ${offsetParam}
       `,
       values
     );
@@ -101,7 +138,31 @@ router.post("/", async (req, res) => {
     min_stock_level = 0,
   } = req.body || {};
 
-  if (!sku || !name) return res.status(400).json({ error: "sku and name are required" });
+  const cleanSku = toTrimmedString(sku);
+  const cleanName = toTrimmedString(name);
+  const cleanDescription = toTrimmedString(description);
+  const cleanCategory = toTrimmedString(category);
+  const parsedSupplierId = supplier_id === null ? null : toNonNegativeInteger(supplier_id, null);
+  const parsedUnitPrice = toNonNegativeNumber(unit_price, 0);
+  const parsedUnitCost = toNonNegativeNumber(unit_cost, 0);
+  const parsedStock = toNonNegativeInteger(stock_on_hand, 0);
+  const parsedMinStock = toNonNegativeInteger(min_stock_level, 0);
+
+  if (!cleanSku || !cleanName) {
+    return res.status(400).json({ error: "sku and name are required" });
+  }
+
+  if (
+    parsedUnitPrice === null ||
+    parsedUnitCost === null ||
+    parsedStock === null ||
+    parsedMinStock === null ||
+    (supplier_id !== null && supplier_id !== undefined && parsedSupplierId === null)
+  ) {
+    return res.status(400).json({
+      error: "unit_price, unit_cost, stock_on_hand, min_stock_level must be non-negative; supplier_id must be a non-negative integer or null",
+    });
+  }
 
   try {
     const result = await pool.query(
@@ -112,7 +173,17 @@ router.post("/", async (req, res) => {
         ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       RETURNING *
       `,
-      [sku, name, description, category, supplier_id, unit_price, unit_cost, stock_on_hand, min_stock_level]
+      [
+        cleanSku,
+        cleanName,
+        cleanDescription,
+        cleanCategory,
+        parsedSupplierId,
+        parsedUnitPrice,
+        parsedUnitCost,
+        parsedStock,
+        parsedMinStock,
+      ]
     );
 
     res.status(201).json(result.rows[0]);
@@ -141,6 +212,47 @@ router.put("/:id", async (req, res) => {
     is_active,
   } = req.body || {};
 
+  const cleanSku = sku === undefined ? undefined : toTrimmedString(sku);
+  const cleanName = name === undefined ? undefined : toTrimmedString(name);
+  const cleanDescription = description === undefined ? undefined : toTrimmedString(description);
+  const cleanCategory = category === undefined ? undefined : toTrimmedString(category);
+
+  const parsedSupplierId =
+    supplier_id === undefined
+      ? undefined
+      : supplier_id === null
+        ? null
+        : toNonNegativeInteger(supplier_id, null);
+
+  const parsedUnitPrice =
+    unit_price === undefined ? undefined : toNonNegativeNumber(unit_price, null);
+  const parsedUnitCost =
+    unit_cost === undefined ? undefined : toNonNegativeNumber(unit_cost, null);
+  const parsedStock =
+    stock_on_hand === undefined ? undefined : toNonNegativeInteger(stock_on_hand, null);
+  const parsedMinStock =
+    min_stock_level === undefined ? undefined : toNonNegativeInteger(min_stock_level, null);
+
+  if ((sku !== undefined && !cleanSku) || (name !== undefined && !cleanName)) {
+    return res.status(400).json({ error: "sku and name cannot be empty when provided" });
+  }
+
+  if (
+    (supplier_id !== undefined && parsedSupplierId === null && supplier_id !== null) ||
+    (unit_price !== undefined && parsedUnitPrice === null) ||
+    (unit_cost !== undefined && parsedUnitCost === null) ||
+    (stock_on_hand !== undefined && parsedStock === null) ||
+    (min_stock_level !== undefined && parsedMinStock === null)
+  ) {
+    return res.status(400).json({
+      error: "Invalid update payload: numeric fields must be non-negative and supplier_id must be a non-negative integer or null",
+    });
+  }
+
+  if (is_active !== undefined && typeof is_active !== "boolean") {
+    return res.status(400).json({ error: "is_active must be boolean" });
+  }
+
   try {
     const result = await pool.query(
       `
@@ -160,7 +272,19 @@ router.put("/:id", async (req, res) => {
       WHERE id = $1
       RETURNING *
       `,
-      [id, sku, name, description, category, supplier_id, unit_price, unit_cost, stock_on_hand, min_stock_level, is_active]
+      [
+        id,
+        cleanSku,
+        cleanName,
+        cleanDescription,
+        cleanCategory,
+        parsedSupplierId,
+        parsedUnitPrice,
+        parsedUnitCost,
+        parsedStock,
+        parsedMinStock,
+        is_active,
+      ]
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });

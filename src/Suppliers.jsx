@@ -1,29 +1,30 @@
 import "./Inventory.css";
 import { useEffect, useState } from "react";
-import AddProductForm from "./AddProductForm";
-import EditProductForm from "./EditProductForm";
+import { useAuth } from "./AuthContext";
 
 function Suppliers() {
-  const [products, setProducts] = useState([]);
+  const { user } = useAuth();
+  const isAdmin = user?.account_type === "admin";
+  const isReadOnly = !isAdmin;
+  
+  const [suppliers, setSuppliers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
 
-  const [editingProduct, setEditingProduct] = useState(null);
+  const emptyForm = { name: "", email: "", phone: "" };
+  const [form, setForm] = useState(emptyForm);
+  const [editingSupplierId, setEditingSupplierId] = useState(null);
 
-  async function loadProducts(q = "") {
+  async function loadSuppliers() {
     setLoading(true);
     setError("");
 
-    const params = new URLSearchParams();
-    if (q.trim()) params.set("search", q.trim());
-
     try {
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await fetch("/api/suppliers");
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to load products");
-      setProducts(json.data || []);
+      if (!res.ok) throw new Error(json?.error || "Failed to load suppliers");
+      setSuppliers(json.data || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -32,30 +33,90 @@ function Suppliers() {
   }
 
   useEffect(() => {
-    loadProducts();
+    loadSuppliers();
   }, []);
 
-  async function handleDelete(product) {
-    const ok = confirm(`Delete "${product.name}"?`);
+  async function handleDelete(supplier) {
+    const ok = confirm(`Delete "${supplier.name}"?`);
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/suppliers/${supplier.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Failed to delete product");
+        throw new Error(data?.error || "Failed to delete supplier");
       }
-      loadProducts(search);
+      loadSuppliers();
     } catch (e) {
       alert(e.message);
     }
   }
 
+  function startCreate() {
+    setEditingSupplierId(null);
+    setForm(emptyForm);
+  }
+
+  function startEdit(supplier) {
+    setEditingSupplierId(supplier.id);
+    setForm({
+      name: supplier.name || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+    });
+  }
+
+  async function submitSupplier(e) {
+    e.preventDefault();
+    setError("");
+
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+    };
+
+    if (!payload.name) {
+      setError("Supplier name is required");
+      return;
+    }
+
+    try {
+      const isEditing = Number.isFinite(editingSupplierId);
+      const res = await fetch(isEditing ? `/api/suppliers/${editingSupplierId}` : "/api/suppliers", {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to save supplier");
+
+      startCreate();
+      loadSuppliers();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  const filteredSuppliers = suppliers.filter((supplier) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      supplier.name?.toLowerCase().includes(q) ||
+      supplier.email?.toLowerCase().includes(q) ||
+      supplier.phone?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="col-9 container-fluid p-4">
-      <h1 className="display-4">Suppliers</h1>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h1 className="display-4">Suppliers</h1>
+        {isReadOnly && <span className="badge bg-warning">Read-Only (Staff)</span>}
+      </div>
 
       <div className="table-box">
         <div className="container-fluid d-flex justify-content-between px-4 py-3">
@@ -64,7 +125,6 @@ function Suppliers() {
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              loadProducts(search);
             }}
           >
             <input
@@ -96,7 +156,7 @@ function Suppliers() {
                   <button
                     className="dropdown-item"
                     type="button"
-                    onClick={() => loadProducts("")}
+                    onClick={() => setSearch("")}
                   >
                     Clear filter
                   </button>
@@ -108,30 +168,52 @@ function Suppliers() {
           <div className="d-flex justify-content-between gap-1">
             <button
               className="btn btn-primary"
-              onClick={() => {
-                setEditingProduct(null);
-                setShowAdd(true);
-              }}
+              onClick={startCreate}
+              disabled={isReadOnly}
+              title={isReadOnly ? "Staff cannot add suppliers" : ""}
             >
-              Add Product
+              New Supplier
             </button>
           </div>
         </div>
 
-        {showAdd && (
-          <AddProductForm
-            onClose={() => setShowAdd(false)}
-            onCreated={() => loadProducts(search)}
-          />
-        )}
-
-        {editingProduct && (
-          <EditProductForm
-            product={editingProduct}
-            onClose={() => setEditingProduct(null)}
-            onUpdated={() => loadProducts(search)}
-          />
-        )}
+        <form className="row g-2 px-4 pb-2" onSubmit={submitSupplier}>
+          <div className="col-md-4">
+            <input
+              className="form-control"
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="col-md-4">
+            <input
+              className="form-control"
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="col-md-2">
+            <input
+              className="form-control"
+              placeholder="Phone"
+              value={form.phone}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              disabled={isReadOnly}
+            />
+          </div>
+          <div className="col-md-2 d-grid gap-2 d-md-flex">
+            <button className="btn btn-primary" type="submit" disabled={isReadOnly}>
+              {Number.isFinite(editingSupplierId) ? "Save" : "Add"}
+            </button>
+            <button className="btn btn-outline-secondary" type="button" onClick={startCreate} disabled={isReadOnly}>
+              Clear
+            </button>
+          </div>
+        </form>
 
         <div className="px-4">
           {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -143,45 +225,36 @@ function Suppliers() {
             <thead className="table-secondary">
               <tr>
                 <th scope="col">#</th>
-                <th scope="col">SKU</th>
                 <th scope="col">Name</th>
-                <th scope="col">Category</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Min Stock</th>
-                <th scope="col">Unit Price</th>
-                <th scope="col">Cost</th>
+                <th scope="col">Email</th>
+                <th scope="col">Phone</th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {products.map((p, idx) => (
-                <tr key={p.id}>
+              {filteredSuppliers.map((supplier, idx) => (
+                <tr key={supplier.id}>
                   <th scope="row">{idx + 1}</th>
-                  <td>{p.sku}</td>
-                  <td>{p.name}</td>
-                  <td>{p.category || "-"}</td>
-                  <td>{p.stock_on_hand}</td>
-                  <td>{p.min_stock_level}</td>
-                  <td>{p.unit_price}</td>
-                  <td>{p.unit_cost}</td>
+                  <td>{supplier.name}</td>
+                  <td>{supplier.email || "-"}</td>
+                  <td>{supplier.phone || "-"}</td>
                   <td>
                     <button
                       className="btn btn-white btn-outline-secondary me-2"
                       type="button"
-                      onClick={() => {
-                        setShowAdd(false);
-                        setEditingProduct(p);
-                      }}
-                      title="Edit"
+                      onClick={() => startEdit(supplier)}
+                      disabled={isReadOnly}
+                      title={isReadOnly ? "Staff cannot edit suppliers" : "Edit"}
                     >
                       <i className="bi bi-pencil-square"></i>
                     </button>
                     <button
                       className="btn btn-danger"
                       type="button"
-                      onClick={() => handleDelete(p)}
-                      title="Delete"
+                      onClick={() => handleDelete(supplier)}
+                      disabled={isReadOnly}
+                      title={isReadOnly ? "Staff cannot delete suppliers" : "Delete"}
                     >
                       <i className="bi bi-trash"></i>
                     </button>
@@ -189,10 +262,10 @@ function Suppliers() {
                 </tr>
               ))}
 
-              {!loading && products.length === 0 && (
+              {!loading && filteredSuppliers.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    No products found
+                  <td colSpan="5" className="text-center py-4">
+                    No suppliers found
                   </td>
                 </tr>
               )}

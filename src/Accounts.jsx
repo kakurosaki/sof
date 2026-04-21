@@ -1,18 +1,21 @@
 import "./Inventory.css";
 import { useEffect, useState } from "react";
-import AddProductForm from "./AddProductForm";
-import EditProductForm from "./EditProductForm";
 
 function Accounts() {
-  const [products, setProducts] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    account_type: "customer",
+  });
 
-  const [editingProduct, setEditingProduct] = useState(null);
-
-  async function loadProducts(q = "") {
+  async function loadAccounts(q = "") {
     setLoading(true);
     setError("");
 
@@ -20,10 +23,10 @@ function Accounts() {
     if (q.trim()) params.set("search", q.trim());
 
     try {
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await fetch(`/api/accounts?${params.toString()}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to load products");
-      setProducts(json.data || []);
+      if (!res.ok) throw new Error(json?.error || "Failed to load accounts");
+      setAccounts(json.data || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -32,24 +35,77 @@ function Accounts() {
   }
 
   useEffect(() => {
-    loadProducts();
+    loadAccounts();
   }, []);
 
-  async function handleDelete(product) {
-    const ok = confirm(`Delete "${product.name}"?`);
+  async function handleDelete(account) {
+    const ok = confirm(`Delete "${account.name}"?`);
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/accounts/${account.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Failed to delete product");
+        throw new Error(data?.error || "Failed to delete account");
       }
-      loadProducts(search);
+      loadAccounts(search);
     } catch (e) {
       alert(e.message);
+    }
+  }
+
+  function startCreate() {
+    setEditingAccount(null);
+    setForm({ name: "", email: "", phone: "", account_type: "customer" });
+    setShowForm(true);
+  }
+
+  function startEdit(account) {
+    setEditingAccount(account.id);
+    setForm({
+      name: account.name || "",
+      email: account.email || "",
+      phone: account.phone || "",
+      account_type: account.account_type || "customer",
+    });
+    setShowForm(true);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      account_type: form.account_type,
+    };
+
+    if (!payload.name) {
+      setError("Account name is required");
+      return;
+    }
+
+    try {
+      const isEditing = Number.isFinite(editingAccount);
+      const res = await fetch(isEditing ? `/api/accounts/${editingAccount}` : "/api/accounts", {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to save account");
+
+      setShowForm(false);
+      setEditingAccount(null);
+      setForm({ name: "", email: "", phone: "", account_type: "customer" });
+      loadAccounts(search);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -108,29 +164,66 @@ function Accounts() {
           <div className="d-flex justify-content-between gap-1">
             <button
               className="btn btn-primary"
-              onClick={() => {
-                setEditingProduct(null);
-                setShowAdd(true);
-              }}
+              onClick={startCreate}
             >
-              Add Product
+              Create Account
             </button>
           </div>
         </div>
 
-        {showAdd && (
-          <AddProductForm
-            onClose={() => setShowAdd(false)}
-            onCreated={() => loadProducts(search)}
-          />
-        )}
-
-        {editingProduct && (
-          <EditProductForm
-            product={editingProduct}
-            onClose={() => setEditingProduct(null)}
-            onUpdated={() => loadProducts(search)}
-          />
+        {showForm && (
+          <form className="row g-2 px-4 pb-3" onSubmit={handleSubmit}>
+            <div className="col-md-4">
+              <input
+                className="form-control"
+                placeholder="Account Name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div className="col-md-3">
+              <input
+                className="form-control"
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            <div className="col-md-2">
+              <input
+                className="form-control"
+                placeholder="Phone"
+                value={form.phone}
+                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                value={form.account_type}
+                onChange={(e) => setForm((prev) => ({ ...prev, account_type: e.target.value }))}
+              >
+                <option value="customer">Customer</option>
+                <option value="vendor">Vendor</option>
+                <option value="staff">Staff</option>
+              </select>
+            </div>
+            <div className="col-md-1 d-grid gap-2 d-md-flex">
+              <button className="btn btn-primary" type="submit">
+                {Number.isFinite(editingAccount) ? "Save" : "Add"}
+              </button>
+              <button
+                className="btn btn-outline-secondary"
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingAccount(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </form>
         )}
 
         <div className="px-4">
@@ -143,35 +236,28 @@ function Accounts() {
             <thead className="table-secondary">
               <tr>
                 <th scope="col">#</th>
-                <th scope="col">SKU</th>
                 <th scope="col">Name</th>
-                <th scope="col">Category</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Min Stock</th>
-                <th scope="col">Unit Price</th>
-                <th scope="col">Cost</th>
+                <th scope="col">Email</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Type</th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {products.map((p, idx) => (
-                <tr key={p.id}>
+              {accounts.map((account, idx) => (
+                <tr key={account.id}>
                   <th scope="row">{idx + 1}</th>
-                  <td>{p.sku}</td>
-                  <td>{p.name}</td>
-                  <td>{p.category || "-"}</td>
-                  <td>{p.stock_on_hand}</td>
-                  <td>{p.min_stock_level}</td>
-                  <td>{p.unit_price}</td>
-                  <td>{p.unit_cost}</td>
+                  <td>{account.name}</td>
+                  <td>{account.email || "-"}</td>
+                  <td>{account.phone || "-"}</td>
+                  <td>{account.account_type}</td>
                   <td>
                     <button
                       className="btn btn-white btn-outline-secondary me-2"
                       type="button"
                       onClick={() => {
-                        setShowAdd(false);
-                        setEditingProduct(p);
+                        startEdit(account);
                       }}
                       title="Edit"
                     >
@@ -180,7 +266,7 @@ function Accounts() {
                     <button
                       className="btn btn-danger"
                       type="button"
-                      onClick={() => handleDelete(p)}
+                      onClick={() => handleDelete(account)}
                       title="Delete"
                     >
                       <i className="bi bi-trash"></i>
@@ -189,10 +275,10 @@ function Accounts() {
                 </tr>
               ))}
 
-              {!loading && products.length === 0 && (
+              {!loading && accounts.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
-                    No products found
+                  <td colSpan="5" className="text-center py-4">
+                    No accounts found
                   </td>
                 </tr>
               )}

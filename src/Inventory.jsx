@@ -1,9 +1,14 @@
 import "./Inventory.css";
 import { useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 
 function Inventory() {
+  const { user } = useAuth();
+  const isAdmin = user?.account_type === "admin";
+  const isReadOnly = !isAdmin;
+  
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,7 +58,10 @@ function Inventory() {
 
   return (
     <div className="col-9 container-fluid p-4">
-      <h1 className="display-4">Inventory</h1>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h1 className="display-4">Inventory</h1>
+        {isReadOnly && <span className="badge bg-warning">Read-Only (Staff)</span>}
+      </div>
 
       <div className="table-box">
         <div className="container-fluid d-flex justify-content-between px-4 py-3">
@@ -102,6 +110,8 @@ function Inventory() {
                 setEditingProduct(null);
                 setShowAdd(true);
               }}
+              disabled={isReadOnly}
+              title={isReadOnly ? "Staff cannot add products" : ""}
             >
               Add Product
             </button>
@@ -163,7 +173,8 @@ function Inventory() {
                         setShowAdd(false);
                         setEditingProduct(p);
                       }}
-                      title="Edit"
+                      disabled={isReadOnly}
+                      title={isReadOnly ? "Staff cannot edit products" : "Edit"}
                     >
                       <i className="bi bi-pencil-square"></i>
                     </button>
@@ -171,7 +182,8 @@ function Inventory() {
                       className="btn btn-danger"
                       type="button"
                       onClick={() => handleDelete(p)}
-                      title="Delete"
+                      disabled={isReadOnly}
+                      title={isReadOnly ? "Staff cannot delete products" : "Delete"}
                     >
                       <i className="bi bi-trash"></i>
                     </button>

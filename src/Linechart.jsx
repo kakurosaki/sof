@@ -1,5 +1,4 @@
-import React from 'react';
-import { Line } from 'react-chartjs-2';
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,9 +8,8 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
+} from "chart.js";
 
-// Register the necessary components from Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -22,52 +20,57 @@ ChartJS.register(
   Legend
 );
 
-const Linechart = () => {
-  // 1. Define the chart data
+const defaultLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+const defaultValues = [0, 0, 0, 0, 0, 0];
+
+function Linechart({
+  labels = defaultLabels,
+  values = defaultValues,
+  lineColor = "rgb(75, 192, 192)",
+  xLabel = "Period",
+  yLabel = "Value",
+}) {
   const data = {
-    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+    labels,
     datasets: [
       {
         label: "",
-        data: [65, 59, 80, 81, 56, 55, 40],
+        data: values,
         fill: false,
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1, // Gives the line a slight curve; set to 0 for straight lines
+        borderColor: lineColor,
+        tension: 0.25,
       },
     ],
   };
 
-  // 2. Define the chart options
   const options = {
     responsive: true,
     plugins: {
       legend: {
         display: false,
-        position: '', // Positions the legend at the top of the chart
       },
       title: {
         display: true,
-        text: '', // Adds a title to the chart
+        text: "",
       },
     },
     scales: {
-        x: {
-            title: {
-                display: true,
-                text: 'Month'
-            }
+      x: {
+        title: {
+          display: true,
+          text: xLabel,
         },
-        y: {
-            title: {
-                display: true,
-                text: 'Value'
-            }
-        }
-    }
+      },
+      y: {
+        title: {
+          display: true,
+          text: yLabel,
+        },
+      },
+    },
   };
 
-  // 3. Render the Line component with data and options
-  return <Line data={data} options={options}/>;
-};
+  return <Line data={data} options={options} />;
+}
 
 export default Linechart;
