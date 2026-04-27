@@ -8,7 +8,7 @@ function Inventory() {
   const { user } = useAuth();
   const isAdmin = user?.account_type === "admin";
   const isReadOnly = !isAdmin;
-  
+
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [supplierFilter, setSupplierFilter] = useState("");
@@ -25,7 +25,7 @@ function Inventory() {
   async function loadProducts(
     q = "",
     supplierId = supplierFilter,
-    category = categoryFilter
+    category = categoryFilter,
   ) {
     setLoading(true);
     setError("");
@@ -73,8 +73,10 @@ function Inventory() {
       const aValue = a?.[sortBy];
       const bValue = b?.[sortBy];
 
-      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
-      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+      if (aValue === null || aValue === undefined)
+        return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined)
+        return sortDirection === "asc" ? 1 : -1;
 
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
@@ -94,7 +96,9 @@ function Inventory() {
       .map((product) => product.category)
       .filter((category) => Boolean(category && String(category).trim()));
 
-    return [...new Set(categories)].sort((a, b) => String(a).localeCompare(String(b)));
+    return [...new Set(categories)].sort((a, b) =>
+      String(a).localeCompare(String(b)),
+    );
   }, [products]);
 
   function handleSort(column) {
@@ -119,7 +123,9 @@ function Inventory() {
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to delete product");
@@ -131,10 +137,12 @@ function Inventory() {
   }
 
   return (
-    <div className="col-9 container-fluid p-4">
+    <div className="col-9 container-fluid p-5">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h1 className="display-4">Inventory</h1>
-        {isReadOnly && <span className="badge bg-warning">Read-Only (Staff)</span>}
+        {isReadOnly && (
+          <span className="badge bg-warning">Read-Only (Staff)</span>
+        )}
       </div>
 
       <div className="table-box">
@@ -154,7 +162,11 @@ function Inventory() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button type="submit" className="btn btn-primary me-2" disabled={loading}>
+            <button
+              type="submit"
+              className="btn btn-primary me-2"
+              disabled={loading}
+            >
               <i className="bi bi-search"></i>
             </button>
 
@@ -204,7 +216,9 @@ function Inventory() {
                   <button
                     className="btn btn-primary btn-sm"
                     type="button"
-                    onClick={() => loadProducts(search, supplierFilter, categoryFilter)}
+                    onClick={() =>
+                      loadProducts(search, supplierFilter, categoryFilter)
+                    }
                   >
                     Apply
                   </button>
@@ -250,7 +264,9 @@ function Inventory() {
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title" id="addProductModalLabel">Add Product</h5>
+                <h5 className="modal-title" id="addProductModalLabel">
+                  Add Product
+                </h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -288,31 +304,85 @@ function Inventory() {
             <thead className="table-secondary">
               <tr>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("id")}
+                  >
+                    # {getSortIcon("id")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("sku")}>SKU{getSortIcon("sku")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("sku")}
+                  >
+                    SKU{getSortIcon("sku")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("name")}
+                  >
+                    Name{getSortIcon("name")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("category")}>Category{getSortIcon("category")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("category")}
+                  >
+                    Category{getSortIcon("category")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("supplier_name")}>Supplier{getSortIcon("supplier_name")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("supplier_name")}
+                  >
+                    Supplier{getSortIcon("supplier_name")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("stock_on_hand")}>Stock{getSortIcon("stock_on_hand")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("stock_on_hand")}
+                  >
+                    Stock{getSortIcon("stock_on_hand")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("min_stock_level")}>Min Stock{getSortIcon("min_stock_level")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("min_stock_level")}
+                  >
+                    Min Stock{getSortIcon("min_stock_level")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("unit_price")}>Unit Price{getSortIcon("unit_price")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("unit_price")}
+                  >
+                    Unit Price{getSortIcon("unit_price")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("unit_cost")}>Cost{getSortIcon("unit_cost")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("unit_cost")}
+                  >
+                    Cost{getSortIcon("unit_cost")}
+                  </button>
                 </th>
                 <th scope="col">Actions</th>
               </tr>
@@ -348,7 +418,9 @@ function Inventory() {
                       type="button"
                       onClick={() => handleDelete(p)}
                       disabled={isReadOnly}
-                      title={isReadOnly ? "Staff cannot delete products" : "Delete"}
+                      title={
+                        isReadOnly ? "Staff cannot delete products" : "Delete"
+                      }
                     >
                       <i className="bi bi-trash"></i>
                     </button>

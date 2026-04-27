@@ -6,7 +6,7 @@ function Suppliers() {
   const { user } = useAuth();
   const isAdmin = user?.account_type === "admin";
   const isReadOnly = !isAdmin;
-  
+
   const [suppliers, setSuppliers] = useState([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("id");
@@ -90,11 +90,14 @@ function Suppliers() {
 
     try {
       const isEditing = Number.isFinite(editingSupplierId);
-      const res = await fetch(isEditing ? `/api/suppliers/${editingSupplierId}` : "/api/suppliers", {
-        method: isEditing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        isEditing ? `/api/suppliers/${editingSupplierId}` : "/api/suppliers",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to save supplier");
@@ -125,8 +128,10 @@ function Suppliers() {
       const aValue = a?.[sortBy];
       const bValue = b?.[sortBy];
 
-      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
-      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+      if (aValue === null || aValue === undefined)
+        return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined)
+        return sortDirection === "asc" ? 1 : -1;
 
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
@@ -159,10 +164,12 @@ function Suppliers() {
   }
 
   return (
-    <div className="col-9 container-fluid p-4">
+    <div className="col-9 container-fluid p-5">
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h1 className="display-4">Suppliers</h1>
-        {isReadOnly && <span className="badge bg-warning">Read-Only (Staff)</span>}
+        {isReadOnly && (
+          <span className="badge bg-warning">Read-Only (Staff)</span>
+        )}
       </div>
 
       <div className="table-box">
@@ -214,7 +221,9 @@ function Suppliers() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title" id="supplierFormModalLabel">
-                  {Number.isFinite(editingSupplierId) ? "Edit Supplier" : "New Supplier"}
+                  {Number.isFinite(editingSupplierId)
+                    ? "Edit Supplier"
+                    : "New Supplier"}
                 </h5>
                 <button
                   type="button"
@@ -234,7 +243,9 @@ function Suppliers() {
                       className="form-control"
                       placeholder="Name"
                       value={form.name}
-                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, name: e.target.value }))
+                      }
                       disabled={isReadOnly}
                     />
                   </div>
@@ -243,7 +254,9 @@ function Suppliers() {
                       className="form-control"
                       placeholder="Email"
                       value={form.email}
-                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, email: e.target.value }))
+                      }
                       disabled={isReadOnly}
                     />
                   </div>
@@ -252,12 +265,18 @@ function Suppliers() {
                       className="form-control"
                       placeholder="Phone"
                       value={form.phone}
-                      onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, phone: e.target.value }))
+                      }
                       disabled={isReadOnly}
                     />
                   </div>
                   <div className="col-12 d-flex gap-2 justify-content-end mt-3">
-                    <button className="btn btn-primary" type="submit" disabled={isReadOnly}>
+                    <button
+                      className="btn btn-primary"
+                      type="submit"
+                      disabled={isReadOnly}
+                    >
                       {Number.isFinite(editingSupplierId) ? "Save" : "Add"}
                     </button>
                     <button
@@ -290,16 +309,40 @@ function Suppliers() {
             <thead className="table-secondary">
               <tr>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("id")}
+                  >
+                    # {getSortIcon("id")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("name")}
+                  >
+                    Name{getSortIcon("name")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("email")}>Email{getSortIcon("email")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("email")}
+                  >
+                    Email{getSortIcon("email")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("phone")}>Phone{getSortIcon("phone")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("phone")}
+                  >
+                    Phone{getSortIcon("phone")}
+                  </button>
                 </th>
                 <th scope="col">Actions</th>
               </tr>
@@ -318,7 +361,9 @@ function Suppliers() {
                       type="button"
                       onClick={() => startEdit(supplier)}
                       disabled={isReadOnly}
-                      title={isReadOnly ? "Staff cannot edit suppliers" : "Edit"}
+                      title={
+                        isReadOnly ? "Staff cannot edit suppliers" : "Edit"
+                      }
                     >
                       <i className="bi bi-pencil-square"></i>
                     </button>
@@ -327,7 +372,9 @@ function Suppliers() {
                       type="button"
                       onClick={() => handleDelete(supplier)}
                       disabled={isReadOnly}
-                      title={isReadOnly ? "Staff cannot delete suppliers" : "Delete"}
+                      title={
+                        isReadOnly ? "Staff cannot delete suppliers" : "Delete"
+                      }
                     >
                       <i className="bi bi-trash"></i>
                     </button>

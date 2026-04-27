@@ -47,7 +47,9 @@ function Accounts() {
       .map((account) => account.account_type)
       .filter((type) => Boolean(type && String(type).trim()));
 
-    return [...new Set(types)].sort((a, b) => String(a).localeCompare(String(b)));
+    return [...new Set(types)].sort((a, b) =>
+      String(a).localeCompare(String(b)),
+    );
   }, [accounts]);
 
   const sortedAccounts = useMemo(() => {
@@ -55,7 +57,7 @@ function Accounts() {
       ? accounts.filter(
           (account) =>
             String(account.account_type || "").toLowerCase() ===
-            String(accountTypeFilter).toLowerCase()
+            String(accountTypeFilter).toLowerCase(),
         )
       : accounts;
 
@@ -65,8 +67,10 @@ function Accounts() {
       const aValue = a?.[sortBy];
       const bValue = b?.[sortBy];
 
-      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
-      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+      if (aValue === null || aValue === undefined)
+        return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined)
+        return sortDirection === "asc" ? 1 : -1;
 
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
@@ -151,11 +155,14 @@ function Accounts() {
 
     try {
       const isEditing = Number.isFinite(editingAccount);
-      const res = await fetch(isEditing ? `/api/accounts/${editingAccount}` : "/api/accounts", {
-        method: isEditing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        isEditing ? `/api/accounts/${editingAccount}` : "/api/accounts",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to save account");
@@ -170,7 +177,7 @@ function Accounts() {
   }
 
   return (
-    <div className="col-9 container-fluid p-4">
+    <div className="col-9 container-fluid p-5">
       <h1 className="display-4">Accounts</h1>
 
       <div className="table-box">
@@ -213,7 +220,9 @@ function Accounts() {
                   <select
                     className="form-select form-select-sm"
                     value={pendingAccountTypeFilter}
-                    onChange={(e) => setPendingAccountTypeFilter(e.target.value)}
+                    onChange={(e) =>
+                      setPendingAccountTypeFilter(e.target.value)
+                    }
                   >
                     <option value="">All types</option>
                     {typeOptions.map((type) => (
@@ -228,7 +237,9 @@ function Accounts() {
                   <button
                     className="btn btn-primary btn-sm"
                     type="button"
-                    onClick={() => setAccountTypeFilter(pendingAccountTypeFilter)}
+                    onClick={() =>
+                      setAccountTypeFilter(pendingAccountTypeFilter)
+                    }
                   >
                     Apply
                   </button>
@@ -248,10 +259,7 @@ function Accounts() {
           </form>
 
           <div className="d-flex justify-content-between gap-1">
-            <button
-              className="btn btn-primary"
-              onClick={startCreate}
-            >
+            <button className="btn btn-primary" onClick={startCreate}>
               Create Account
             </button>
           </div>
@@ -269,7 +277,9 @@ function Accounts() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title" id="accountFormModalLabel">
-                  {Number.isFinite(editingAccount) ? "Edit Account" : "Create Account"}
+                  {Number.isFinite(editingAccount)
+                    ? "Edit Account"
+                    : "Create Account"}
                 </h5>
                 <button
                   type="button"
@@ -288,7 +298,9 @@ function Accounts() {
                       className="form-control"
                       placeholder="Account Name"
                       value={form.name}
-                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, name: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="col-md-3">
@@ -296,7 +308,9 @@ function Accounts() {
                       className="form-control"
                       placeholder="Email"
                       value={form.email}
-                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, email: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="col-md-2">
@@ -304,14 +318,21 @@ function Accounts() {
                       className="form-control"
                       placeholder="Phone"
                       value={form.phone}
-                      onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, phone: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="col-md-3">
                     <select
                       className="form-select"
                       value={form.account_type}
-                      onChange={(e) => setForm((prev) => ({ ...prev, account_type: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          account_type: e.target.value,
+                        }))
+                      }
                     >
                       <option value="customer">Customer</option>
                       <option value="vendor">Vendor</option>
@@ -350,19 +371,49 @@ function Accounts() {
             <thead className="table-secondary">
               <tr>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("id")}
+                  >
+                    # {getSortIcon("id")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("name")}
+                  >
+                    Name{getSortIcon("name")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("email")}>Email{getSortIcon("email")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("email")}
+                  >
+                    Email{getSortIcon("email")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("phone")}>Phone{getSortIcon("phone")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("phone")}
+                  >
+                    Phone{getSortIcon("phone")}
+                  </button>
                 </th>
                 <th scope="col">
-                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("account_type")}>Type{getSortIcon("account_type")}</button>
+                  <button
+                    className="btn btn-link p-0 text-dark header-sort-btn"
+                    type="button"
+                    onClick={() => handleSort("account_type")}
+                  >
+                    Type{getSortIcon("account_type")}
+                  </button>
                 </th>
                 <th scope="col">Actions</th>
               </tr>
