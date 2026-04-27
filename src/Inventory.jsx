@@ -1,6 +1,7 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 
@@ -21,6 +22,7 @@ function Inventory() {
   const [showAdd, setShowAdd] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState(null);
+  const { notify } = useToast();
 
   async function loadProducts(
     q = "",
@@ -130,6 +132,11 @@ function Inventory() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to delete product");
       }
+      notify({
+        title: "Product deleted",
+        message: `${product.name} was removed from inventory.`,
+        variant: "warning",
+      });
       loadProducts(search);
     } catch (e) {
       alert(e.message);

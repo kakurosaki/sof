@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useToast } from "./ToastContext";
 
 export default function EditProductForm({ product, onUpdated, onClose }) {
   const [form, setForm] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { notify } = useToast();
 
   useEffect(() => {
     async function loadSuppliers() {
@@ -75,6 +77,11 @@ export default function EditProductForm({ product, onUpdated, onClose }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to update product");
 
+      notify({
+        title: "Product updated",
+        message: `${data?.name || form.name.trim()} was saved successfully.`,
+        variant: "info",
+      });
       onUpdated?.(data);
       onClose?.();
     } catch (err) {

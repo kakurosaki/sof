@@ -2,6 +2,7 @@ import SaleItemCard from "./SaleItemCard";
 import OrderItem from "./OrderItem";
 import "./Sales.css";
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "./ToastContext";
 
 function Sales() {
   const [products, setProducts] = useState([]);
@@ -12,6 +13,7 @@ function Sales() {
   const [cart, setCart] = useState([]);
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
+  const { notify } = useToast();
 
   const categories = useMemo(() => {
     const list = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
@@ -63,6 +65,17 @@ function Sales() {
   }
 
   function changeCartQuantity(productId, delta) {
+    if (delta < 0) {
+      const item = cart.find((entry) => entry.product_id === productId);
+      if (item && item.quantity <= 1) {
+        notify({
+          title: "Item removed",
+          message: `${item.name} was removed from the cart.`,
+          variant: "warning",
+        });
+      }
+    }
+
     setCart((prev) =>
       prev
         .map((item) =>
@@ -95,6 +108,11 @@ function Sales() {
 
       setLastOrder(json);
       setCart([]);
+      notify({
+        title: "Checkout complete",
+        message: `Order #${json?.order?.id} was saved successfully.`,
+        variant: "success",
+      });
       await loadProducts();
     } catch (e) {
       setError(e.message);

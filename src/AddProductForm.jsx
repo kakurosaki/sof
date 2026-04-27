@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToast } from "./ToastContext";
 
 export default function AddProductForm({ onCreated, onClose, embedded = false }) {
   const [sku, setSku] = useState("");
@@ -13,6 +14,7 @@ export default function AddProductForm({ onCreated, onClose, embedded = false })
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { notify } = useToast();
 
   useEffect(() => {
     async function loadSuppliers() {
@@ -61,6 +63,11 @@ export default function AddProductForm({ onCreated, onClose, embedded = false })
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to create product");
 
+      notify({
+        title: "Product added",
+        message: `${data?.name || sku.trim()} was created successfully.`,
+        variant: "success",
+      });
       onCreated?.(data);
       onClose?.();
     } catch (err) {

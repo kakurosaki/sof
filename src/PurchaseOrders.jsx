@@ -3,6 +3,7 @@ import EditOrderModal from "./EditOrderModal";
 import LowStockCard from "./LowStockCard";
 import "./PurchaseOrders.css";
 import { useEffect, useState } from "react";
+import { useToast } from "./ToastContext";
 
 function PurchaseOrders() {
   const [lowStock, setLowStock] = useState([]);
@@ -20,6 +21,7 @@ function PurchaseOrders() {
   const [showEditOrderModal, setShowEditOrderModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const { notify } = useToast();
 
   async function loadData() {
     setLoading(true);
@@ -70,6 +72,11 @@ function PurchaseOrders() {
       if (!res.ok)
         throw new Error(json?.error || "Failed to create purchase order");
 
+      notify({
+        title: "Purchase order created",
+        message: "A new purchase order was added successfully.",
+        variant: "success",
+      });
       await loadData();
     } catch (e) {
       setError(e.message);
@@ -105,6 +112,11 @@ function PurchaseOrders() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to claim order");
+      notify({
+        title: "Order claimed",
+        message: `Order #${orderId} was claimed and stock was updated.`,
+        variant: "success",
+      });
       await loadData();
     } catch (e) {
       setError(e.message);
@@ -118,6 +130,11 @@ function PurchaseOrders() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to deny order");
+      notify({
+        title: "Order denied",
+        message: `Order #${orderId} was removed from incoming orders.`,
+        variant: "warning",
+      });
       await loadData();
     } catch (e) {
       setError(e.message);
@@ -143,6 +160,11 @@ function PurchaseOrders() {
 
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to edit order");
+      notify({
+        title: "Order updated",
+        message: `Order #${orderId} was saved successfully.`,
+        variant: "info",
+      });
       await loadData();
       setShowEditOrderModal(false);
       setEditingOrder(null);

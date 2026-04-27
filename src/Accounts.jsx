@@ -1,5 +1,6 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "./ToastContext";
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);
@@ -12,6 +13,7 @@ function Accounts() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
+  const { notify } = useToast();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -114,6 +116,11 @@ function Accounts() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to delete account");
       }
+      notify({
+        title: "Account deleted",
+        message: `${account.name} was removed.`,
+        variant: "warning",
+      });
       loadAccounts(search);
     } catch (e) {
       alert(e.message);
@@ -167,6 +174,11 @@ function Accounts() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to save account");
 
+      notify({
+        title: Number.isFinite(editingAccount) ? "Account updated" : "Account created",
+        message: `${payload.name} was saved successfully.`,
+        variant: Number.isFinite(editingAccount) ? "info" : "success",
+      });
       setShowForm(false);
       setEditingAccount(null);
       setForm({ name: "", email: "", phone: "", account_type: "customer" });

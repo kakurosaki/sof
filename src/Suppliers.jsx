@@ -1,6 +1,7 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
 
 function Suppliers() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ function Suppliers() {
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState(null);
+  const { notify } = useToast();
 
   async function loadSuppliers() {
     setLoading(true);
@@ -51,6 +53,11 @@ function Suppliers() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || "Failed to delete supplier");
       }
+      notify({
+        title: "Supplier deleted",
+        message: `${supplier.name} was removed.`,
+        variant: "warning",
+      });
       loadSuppliers();
     } catch (e) {
       alert(e.message);
@@ -102,6 +109,11 @@ function Suppliers() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to save supplier");
 
+      notify({
+        title: Number.isFinite(editingSupplierId) ? "Supplier updated" : "Supplier created",
+        message: `${payload.name} was saved successfully.`,
+        variant: Number.isFinite(editingSupplierId) ? "info" : "success",
+      });
       setShowForm(false);
       setEditingSupplierId(null);
       setForm(emptyForm);
