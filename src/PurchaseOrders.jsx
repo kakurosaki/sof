@@ -10,7 +10,12 @@ function PurchaseOrders() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [manualOrder, setManualOrder] = useState({ productId: "", quantity: "1", deliveryDate: "" });
+  const [manualOrder, setManualOrder] = useState({
+    productId: "",
+    quantity: "1",
+    deliveryDate: "",
+  });
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -26,9 +31,14 @@ function PurchaseOrders() {
       const incomingJson = await incomingRes.json();
       const productsJson = await productsRes.json();
 
-      if (!lowStockRes.ok) throw new Error(lowStockJson?.error || "Failed to load low stock");
-      if (!incomingRes.ok) throw new Error(incomingJson?.error || "Failed to load incoming orders");
-      if (!productsRes.ok) throw new Error(productsJson?.error || "Failed to load products");
+      if (!lowStockRes.ok)
+        throw new Error(lowStockJson?.error || "Failed to load low stock");
+      if (!incomingRes.ok)
+        throw new Error(
+          incomingJson?.error || "Failed to load incoming orders",
+        );
+      if (!productsRes.ok)
+        throw new Error(productsJson?.error || "Failed to load products");
 
       setLowStock(lowStockJson.data || []);
       setIncomingOrders(incomingJson.data || []);
@@ -53,7 +63,8 @@ function PurchaseOrders() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to create purchase order");
+      if (!res.ok)
+        throw new Error(json?.error || "Failed to create purchase order");
 
       await loadData();
     } catch (e) {
@@ -64,7 +75,11 @@ function PurchaseOrders() {
   async function handleManualOrder(e) {
     e.preventDefault();
 
-    if (!manualOrder.productId || !manualOrder.quantity || !manualOrder.deliveryDate) {
+    if (
+      !manualOrder.productId ||
+      !manualOrder.quantity ||
+      !manualOrder.deliveryDate
+    ) {
       setError("Select a product, quantity, and delivery date");
       return;
     }
@@ -76,11 +91,14 @@ function PurchaseOrders() {
     });
 
     setManualOrder({ productId: "", quantity: "1", deliveryDate: "" });
+    setShowCreateOrderModal(false);
   }
 
   async function handleClaim(orderId) {
     try {
-      const res = await fetch(`/api/purchase-orders/${orderId}/claim`, { method: "PUT" });
+      const res = await fetch(`/api/purchase-orders/${orderId}/claim`, {
+        method: "PUT",
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to claim order");
       await loadData();
@@ -91,7 +109,9 @@ function PurchaseOrders() {
 
   async function handleDeny(orderId) {
     try {
-      const res = await fetch(`/api/purchase-orders/${orderId}/deny`, { method: "PUT" });
+      const res = await fetch(`/api/purchase-orders/${orderId}/deny`, {
+        method: "PUT",
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to deny order");
       await loadData();
@@ -105,7 +125,10 @@ function PurchaseOrders() {
       const res = await fetch(`/api/purchase-orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity, expected_delivery_date: deliveryDate }),
+        body: JSON.stringify({
+          quantity,
+          expected_delivery_date: deliveryDate,
+        }),
       });
 
       const json = await res.json();
@@ -119,64 +142,15 @@ function PurchaseOrders() {
   const filteredLowStock = lowStock.filter((item) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return item.name?.toLowerCase().includes(q) || item.sku?.toLowerCase().includes(q);
+    return (
+      item.name?.toLowerCase().includes(q) ||
+      item.sku?.toLowerCase().includes(q)
+    );
   });
 
   return (
     <div className="col-9 container-fluid purchase-orders p-0">
-      <div className="container-fluid px-3 pt-3">
-        <div className="card">
-          <div className="card-body">
-            <h5 className="card-title mb-3">Create Purchase Order</h5>
-            <form className="row g-2 align-items-end" onSubmit={handleManualOrder}>
-              <div className="col-md-5">
-                <label className="form-label">Product</label>
-                <select
-                  className="form-select"
-                  value={manualOrder.productId}
-                  onChange={(e) => setManualOrder((prev) => ({ ...prev, productId: e.target.value }))}
-                >
-                  <option value="">Select a product</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} ({product.sku})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="form-control"
-                  value={manualOrder.quantity}
-                  onChange={(e) => setManualOrder((prev) => ({ ...prev, quantity: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">Expected Delivery</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={manualOrder.deliveryDate}
-                  onChange={(e) => setManualOrder((prev) => ({ ...prev, deliveryDate: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-2 d-grid">
-                <button className="btn btn-primary" type="submit" disabled={loading}>
-                  Order Product
-                </button>
-              </div>
-            </form>
-            <div className="text-muted small mt-2">
-              Supplier is inferred automatically from the selected product.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3">
+      <div className="">
         <nav className="navbar bg-body-tertiary">
           <div className="container-fluid">
             <a className="navbar-brand">Low Stock</a>
@@ -189,7 +163,11 @@ function PurchaseOrders() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <button className="btn btn-outline-success" type="button" disabled={loading}>
+              <button
+                className="btn btn-outline-success"
+                type="button"
+                disabled={loading}
+              >
                 Search
               </button>
             </form>
@@ -197,7 +175,9 @@ function PurchaseOrders() {
         </nav>
       </div>
 
-      <div className="px-3">{error && <div className="alert alert-danger py-2">{error}</div>}</div>
+      <div className="px-3">
+        {error && <div className="alert alert-danger py-2">{error}</div>}
+      </div>
 
       <div
         className="horizontal-scroll"
@@ -210,7 +190,11 @@ function PurchaseOrders() {
       >
         <div style={{ display: "flex", gap: "20px" }}>
           {filteredLowStock.map((item) => (
-            <LowStockCard key={item.id} item={item} onPlaceOrder={handlePlaceOrder} />
+            <LowStockCard
+              key={item.id}
+              item={item}
+              onPlaceOrder={handlePlaceOrder}
+            />
           ))}
           {!loading && filteredLowStock.length === 0 && (
             <div className="text-muted px-3">No low stock items found</div>
@@ -222,6 +206,12 @@ function PurchaseOrders() {
         <nav className="navbar bg-body-tertiary">
           <div className="container-fluid">
             <span className="navbar-brand mb-0 h1">Incoming Orders</span>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowCreateOrderModal(true)}
+            >
+              Create Purchase Order
+            </button>
           </div>
         </nav>
       </div>
@@ -240,6 +230,95 @@ function PurchaseOrders() {
           <div className="text-muted">No incoming orders</div>
         )}
       </div>
+
+      <div
+        className={`modal fade ${showCreateOrderModal ? "show" : ""}`}
+        id="createOrderModal"
+        tabIndex="-1"
+        aria-labelledby="createOrderModalLabel"
+        aria-hidden={!showCreateOrderModal}
+        style={{ display: showCreateOrderModal ? "block" : "none" }}
+      >
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="createOrderModalLabel">
+                Create Purchase Order
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setShowCreateOrderModal(false)}
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleManualOrder}>
+                <div className="mb-3">
+                  <label className="form-label">Product</label>
+                  <select
+                    className="form-select"
+                    value={manualOrder.productId}
+                    onChange={(e) =>
+                      setManualOrder((prev) => ({
+                        ...prev,
+                        productId: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Select a product</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} ({product.sku})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-control"
+                    value={manualOrder.quantity}
+                    onChange={(e) =>
+                      setManualOrder((prev) => ({
+                        ...prev,
+                        quantity: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Expected Delivery</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={manualOrder.deliveryDate}
+                    onChange={(e) =>
+                      setManualOrder((prev) => ({
+                        ...prev,
+                        deliveryDate: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="text-muted small mb-3">
+                  Supplier is inferred automatically from the selected product.
+                </div>
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={loading}
+                >
+                  Order Product
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {showCreateOrderModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );
 }
