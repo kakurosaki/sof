@@ -17,7 +17,7 @@ router.get("/", async (_req, res) => {
       FROM suppliers
       WHERE is_active = true
       ORDER BY name ASC
-      `
+      `,
     );
 
     res.json({ count: result.rowCount, data: result.rows });
@@ -43,7 +43,7 @@ router.post("/", async (req, res) => {
       VALUES ($1, $2, $3)
       RETURNING id, name, email, phone, is_active
       `,
-      [cleanName, cleanEmail, cleanPhone]
+      [cleanName, cleanEmail, cleanPhone],
     );
 
     res.status(201).json(result.rows[0]);
@@ -58,7 +58,8 @@ router.post("/", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   const { name, email, phone, is_active } = req.body || {};
 
@@ -67,7 +68,9 @@ router.put("/:id", async (req, res) => {
   const cleanPhone = phone === undefined ? undefined : toTrimmedString(phone);
 
   if (name !== undefined && !cleanName) {
-    return res.status(400).json({ error: "name cannot be empty when provided" });
+    return res
+      .status(400)
+      .json({ error: "name cannot be empty when provided" });
   }
 
   if (is_active !== undefined && typeof is_active !== "boolean") {
@@ -82,11 +85,11 @@ router.put("/:id", async (req, res) => {
         name = COALESCE($2, name),
         email = COALESCE($3, email),
         phone = COALESCE($4, phone),
-        is_active = COALESCE($5, is_active),
+        is_active = COALESCE($5, is_active)
       WHERE id = $1
       RETURNING id, name, email, phone, is_active
       `,
-      [id, cleanName, cleanEmail, cleanPhone, is_active]
+      [id, cleanName, cleanEmail, cleanPhone, is_active],
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });
@@ -102,7 +105,8 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   try {
     const result = await pool.query(
@@ -112,7 +116,7 @@ router.delete("/:id", async (req, res) => {
       WHERE id = $1
       RETURNING id
       `,
-      [id]
+      [id],
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });
