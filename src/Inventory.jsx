@@ -1,5 +1,5 @@
 import "./Inventory.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
@@ -10,19 +10,30 @@ function Inventory() {
   const isReadOnly = !isAdmin;
   
   const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState(null);
 
-  async function loadProducts(q = "") {
+  async function loadProducts(
+    q = "",
+    supplierId = supplierFilter,
+    category = categoryFilter
+  ) {
     setLoading(true);
     setError("");
 
     const params = new URLSearchParams();
     if (q.trim()) params.set("search", q.trim());
+    if (supplierId) params.set("supplier_id", supplierId);
+    if (category) params.set("category", category);
 
     try {
       const res = await fetch(`/api/products?${params.toString()}`);
@@ -39,6 +50,69 @@ function Inventory() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    async function loadSuppliers() {
+      try {
+        const res = await fetch("/api/suppliers");
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || "Failed to load suppliers");
+        setSuppliers(json.data || []);
+      } catch (_err) {
+        setSuppliers([]);
+      }
+    }
+
+    loadSuppliers();
+  }, []);
+
+  const sortedProducts = useMemo(() => {
+    const copy = [...products];
+
+    copy.sort((a, b) => {
+      const aValue = a?.[sortBy];
+      const bValue = b?.[sortBy];
+
+      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+
+      const aText = String(aValue).toLowerCase();
+      const bText = String(bValue).toLowerCase();
+      const compare = aText.localeCompare(bText, undefined, { numeric: true });
+      return sortDirection === "asc" ? compare : -compare;
+    });
+
+    return copy;
+  }, [products, sortBy, sortDirection]);
+
+  const categoryOptions = useMemo(() => {
+    const categories = products
+      .map((product) => product.category)
+      .filter((category) => Boolean(category && String(category).trim()));
+
+    return [...new Set(categories)].sort((a, b) => String(a).localeCompare(String(b)));
+  }, [products]);
+
+  function handleSort(column) {
+    setSortBy((prev) => {
+      if (prev === column) {
+        setSortDirection((dir) => (dir === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+
+      setSortDirection("asc");
+      return column;
+    });
+  }
+
+  function getSortIcon(column) {
+    if (sortBy !== column) return "";
+    return sortDirection === "asc" ? " ▲" : " ▼";
+  }
 
   async function handleDelete(product) {
     const ok = confirm(`Delete "${product.name}"?`);
@@ -93,13 +167,60 @@ function Inventory() {
               >
                 Filter
               </button>
-              <ul className="dropdown-menu">
-                <li>
-                  <button className="dropdown-item" type="button" onClick={() => loadProducts("")}>
-                    Clear filter
+              <div className="dropdown-menu p-3 inventory-filter-menu">
+                <div className="mb-2">
+                  <label className="form-label mb-1">Supplier</label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={supplierFilter}
+                    onChange={(e) => setSupplierFilter(e.target.value)}
+                  >
+                    <option value="">All suppliers</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label mb-1">Category</label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                  >
+                    <option value="">All categories</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    type="button"
+                    onClick={() => loadProducts(search, supplierFilter, categoryFilter)}
+                  >
+                    Apply
                   </button>
-                </li>
-              </ul>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    onClick={() => {
+                      setSupplierFilter("");
+                      setCategoryFilter("");
+                      loadProducts(search, "", "");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
 
@@ -118,12 +239,36 @@ function Inventory() {
           </div>
         </div>
 
-        {showAdd && (
-          <AddProductForm
-            onClose={() => setShowAdd(false)}
-            onCreated={() => loadProducts(search)}
-          />
-        )}
+        <div
+          className={`modal fade ${showAdd ? "show" : ""}`}
+          id="addProductModal"
+          tabIndex="-1"
+          aria-labelledby="addProductModalLabel"
+          aria-hidden={!showAdd}
+          style={{ display: showAdd ? "block" : "none" }}
+        >
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title" id="addProductModalLabel">Add Product</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowAdd(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                <AddProductForm
+                  embedded
+                  onClose={() => setShowAdd(false)}
+                  onCreated={() => loadProducts(search)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        {showAdd && <div className="modal-backdrop fade show"></div>}
 
         {editingProduct && (
           <EditProductForm
@@ -142,25 +287,45 @@ function Inventory() {
           <table className="table">
             <thead className="table-secondary">
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">SKU</th>
-                <th scope="col">Name</th>
-                <th scope="col">Category</th>
-                <th scope="col">Stock</th>
-                <th scope="col">Min Stock</th>
-                <th scope="col">Unit Price</th>
-                <th scope="col">Cost</th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("sku")}>SKU{getSortIcon("sku")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("category")}>Category{getSortIcon("category")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("supplier_name")}>Supplier{getSortIcon("supplier_name")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("stock_on_hand")}>Stock{getSortIcon("stock_on_hand")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("min_stock_level")}>Min Stock{getSortIcon("min_stock_level")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("unit_price")}>Unit Price{getSortIcon("unit_price")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("unit_cost")}>Cost{getSortIcon("unit_cost")}</button>
+                </th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {products.map((p, idx) => (
+              {sortedProducts.map((p) => (
                 <tr key={p.id}>
-                  <th scope="row">{idx + 1}</th>
+                  <th scope="row">{p.id}</th>
                   <td>{p.sku}</td>
                   <td>{p.name}</td>
                   <td>{p.category || "-"}</td>
+                  <td>{p.supplier_name || "-"}</td>
                   <td>{p.stock_on_hand}</td>
                   <td>{p.min_stock_level}</td>
                   <td>{p.unit_price}</td>
@@ -191,9 +356,9 @@ function Inventory() {
                 </tr>
               ))}
 
-              {!loading && products.length === 0 && (
+              {!loading && sortedProducts.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
+                  <td colSpan="10" className="text-center py-4">
                     No products found
                   </td>
                 </tr>

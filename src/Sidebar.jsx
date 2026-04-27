@@ -64,6 +64,19 @@ function Sidebar() {
           {isAdmin && (
             <li className="nav-item">
               <NavLink
+                to="/CompletedOrders"
+                end
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+              >
+                Completed Orders
+              </NavLink>
+            </li>
+          )}
+          {isAdmin && (
+            <li className="nav-item">
+              <NavLink
                 to="/PurchaseOrders"
                 end
                 className={({ isActive }) =>

@@ -1,22 +1,47 @@
-function EditOrderModal({ modalId, productName, productId, quantity, deliveryDate }) {
+import { useEffect, useState } from "react";
+
+function EditOrderModal({ show, order, onClose, onSave, saving = false }) {
+  const [quantity, setQuantity] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+
+  useEffect(() => {
+    if (!order) {
+      setQuantity("");
+      setDeliveryDate("");
+      return;
+    }
+
+    setQuantity(String(order.quantity ?? ""));
+    setDeliveryDate(order.expected_delivery_date?.slice(0, 10) || "");
+  }, [order]);
+
+  function handleSave() {
+    if (!order) return;
+    onSave?.(order.id, Number(quantity), deliveryDate);
+  }
+
+  if (!show || !order) return null;
+
   return (
-    <div
-      className="modal fade"
-      id={modalId}
-      tabIndex="-1"
-      aria-labelledby={`${modalId}Label`}
-      aria-hidden="true"
-    >
+    <>
+      <div
+        className={`modal fade ${show ? "show" : ""}`}
+        id="editOrderModal"
+        tabIndex="-1"
+        aria-labelledby="editOrderModalLabel"
+        aria-hidden={!show}
+        style={{ display: show ? "block" : "none" }}
+      >
       <div className="modal-dialog">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title" id={`${modalId}Label`}>
+            <h5 className="modal-title" id="editOrderModalLabel">
               Edit Order
             </h5>
             <button
               type="button"
               className="btn-close"
-              data-bs-dismiss="modal"
+              onClick={onClose}
               aria-label="Close"
             ></button>
           </div>
@@ -28,7 +53,7 @@ function EditOrderModal({ modalId, productName, productId, quantity, deliveryDat
               <input
                 type="text"
                 className="form-control"
-                value={productName}
+                value={order.product_name || ""}
                 disabled
               />
             </div>
@@ -39,48 +64,54 @@ function EditOrderModal({ modalId, productName, productId, quantity, deliveryDat
               <input
                 type="text"
                 className="form-control"
-                value={productId}
+                value={order.product_id || ""}
                 disabled
               />
             </div>
             <div className="mb-3">
-              <label htmlFor={`${modalId}Quantity`} className="form-label">
+              <label htmlFor="editOrderQuantity" className="form-label">
                 <strong>Order Quantity</strong>
               </label>
               <input
                 type="number"
                 className="form-control"
-                id={`${modalId}Quantity`}
-                defaultValue={quantity}
+                id="editOrderQuantity"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
               />
             </div>
             <div className="mb-3">
-              <label htmlFor={`${modalId}Date`} className="form-label">
+              <label htmlFor="editOrderDate" className="form-label">
                 <strong>Expected Delivery Date</strong>
               </label>
               <input
                 type="date"
                 className="form-control"
-                id={`${modalId}Date`}
-                defaultValue={deliveryDate}
+                id="editOrderDate"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
               />
             </div>
           </div>
           <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
-            <button type="button" className="btn btn-primary">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving || !quantity || Number(quantity) <= 0 || !deliveryDate}
+            >
               Save Changes
             </button>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      <div className="modal-backdrop fade show"></div>
+    </>
   );
 }
 

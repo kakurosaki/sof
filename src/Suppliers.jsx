@@ -1,5 +1,5 @@
 import "./Inventory.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
 
 function Suppliers() {
@@ -9,11 +9,14 @@ function Suppliers() {
   
   const [suppliers, setSuppliers] = useState([]);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const emptyForm = { name: "", email: "", phone: "" };
   const [form, setForm] = useState(emptyForm);
+  const [showForm, setShowForm] = useState(false);
   const [editingSupplierId, setEditingSupplierId] = useState(null);
 
   async function loadSuppliers() {
@@ -57,6 +60,7 @@ function Suppliers() {
   function startCreate() {
     setEditingSupplierId(null);
     setForm(emptyForm);
+    setShowForm(true);
   }
 
   function startEdit(supplier) {
@@ -66,6 +70,7 @@ function Suppliers() {
       email: supplier.email || "",
       phone: supplier.phone || "",
     });
+    setShowForm(true);
   }
 
   async function submitSupplier(e) {
@@ -94,7 +99,9 @@ function Suppliers() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to save supplier");
 
-      startCreate();
+      setShowForm(false);
+      setEditingSupplierId(null);
+      setForm(emptyForm);
       loadSuppliers();
     } catch (e) {
       setError(e.message);
@@ -110,6 +117,46 @@ function Suppliers() {
       supplier.phone?.toLowerCase().includes(q)
     );
   });
+
+  const sortedSuppliers = useMemo(() => {
+    const copy = [...filteredSuppliers];
+
+    copy.sort((a, b) => {
+      const aValue = a?.[sortBy];
+      const bValue = b?.[sortBy];
+
+      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+
+      const aText = String(aValue).toLowerCase();
+      const bText = String(bValue).toLowerCase();
+      const compare = aText.localeCompare(bText, undefined, { numeric: true });
+      return sortDirection === "asc" ? compare : -compare;
+    });
+
+    return copy;
+  }, [filteredSuppliers, sortBy, sortDirection]);
+
+  function handleSort(column) {
+    setSortBy((prev) => {
+      if (prev === column) {
+        setSortDirection((dir) => (dir === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+
+      setSortDirection("asc");
+      return column;
+    });
+  }
+
+  function getSortIcon(column) {
+    if (sortBy !== column) return "";
+    return sortDirection === "asc" ? " ▲" : " ▼";
+  }
 
   return (
     <div className="col-9 container-fluid p-4">
@@ -141,28 +188,6 @@ function Suppliers() {
             >
               <i className="bi bi-search"></i>
             </button>
-
-            <div className="dropdown">
-              <button
-                className="btn btn-secondary dropdown-toggle"
-                type="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Filter
-              </button>
-              <ul className="dropdown-menu">
-                <li>
-                  <button
-                    className="dropdown-item"
-                    type="button"
-                    onClick={() => setSearch("")}
-                  >
-                    Clear filter
-                  </button>
-                </li>
-              </ul>
-            </div>
           </form>
 
           <div className="d-flex justify-content-between gap-1">
@@ -177,43 +202,83 @@ function Suppliers() {
           </div>
         </div>
 
-        <form className="row g-2 px-4 pb-2" onSubmit={submitSupplier}>
-          <div className="col-md-4">
-            <input
-              className="form-control"
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              disabled={isReadOnly}
-            />
+        <div
+          className={`modal fade ${showForm ? "show" : ""}`}
+          id="supplierFormModal"
+          tabIndex="-1"
+          aria-labelledby="supplierFormModalLabel"
+          aria-hidden={!showForm}
+          style={{ display: showForm ? "block" : "none" }}
+        >
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title" id="supplierFormModalLabel">
+                  {Number.isFinite(editingSupplierId) ? "Edit Supplier" : "New Supplier"}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingSupplierId(null);
+                    setForm(emptyForm);
+                  }}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form className="row g-2" onSubmit={submitSupplier}>
+                  <div className="col-md-4">
+                    <input
+                      className="form-control"
+                      placeholder="Name"
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="col-md-4">
+                    <input
+                      className="form-control"
+                      placeholder="Email"
+                      value={form.email}
+                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="col-md-4">
+                    <input
+                      className="form-control"
+                      placeholder="Phone"
+                      value={form.phone}
+                      onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="col-12 d-flex gap-2 justify-content-end mt-3">
+                    <button className="btn btn-primary" type="submit" disabled={isReadOnly}>
+                      {Number.isFinite(editingSupplierId) ? "Save" : "Add"}
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingSupplierId(null);
+                        setForm(emptyForm);
+                      }}
+                      disabled={isReadOnly}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
-          <div className="col-md-4">
-            <input
-              className="form-control"
-              placeholder="Email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              disabled={isReadOnly}
-            />
-          </div>
-          <div className="col-md-2">
-            <input
-              className="form-control"
-              placeholder="Phone"
-              value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-              disabled={isReadOnly}
-            />
-          </div>
-          <div className="col-md-2 d-grid gap-2 d-md-flex">
-            <button className="btn btn-primary" type="submit" disabled={isReadOnly}>
-              {Number.isFinite(editingSupplierId) ? "Save" : "Add"}
-            </button>
-            <button className="btn btn-outline-secondary" type="button" onClick={startCreate} disabled={isReadOnly}>
-              Clear
-            </button>
-          </div>
-        </form>
+        </div>
+        {showForm && <div className="modal-backdrop fade show"></div>}
 
         <div className="px-4">
           {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -224,18 +289,26 @@ function Suppliers() {
           <table className="table">
             <thead className="table-secondary">
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
-                <th scope="col">Phone</th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("email")}>Email{getSortIcon("email")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("phone")}>Phone{getSortIcon("phone")}</button>
+                </th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredSuppliers.map((supplier, idx) => (
+              {sortedSuppliers.map((supplier) => (
                 <tr key={supplier.id}>
-                  <th scope="row">{idx + 1}</th>
+                  <th scope="row">{supplier.id}</th>
                   <td>{supplier.name}</td>
                   <td>{supplier.email || "-"}</td>
                   <td>{supplier.phone || "-"}</td>
@@ -262,7 +335,7 @@ function Suppliers() {
                 </tr>
               ))}
 
-              {!loading && filteredSuppliers.length === 0 && (
+              {!loading && sortedSuppliers.length === 0 && (
                 <tr>
                   <td colSpan="5" className="text-center py-4">
                     No suppliers found

@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Dashboard from "./Dashboard";
 import Inventory from "./Inventory";
 import Sales from "./Sales";
+import CompletedOrders from "./CompletedOrders";
 import PurchaseOrders from "./PurchaseOrders";
 import Accounts from "./Accounts";
 import Suppliers from "./Suppliers";
@@ -54,6 +55,12 @@ function App() {
             
             {/* Sales accessible to all (Staff and Admin) */}
             <Route path="/Sales" element={<ProtectedRoute element={<Sales />} />} />
+
+            {/* Completed Orders: Admin only */}
+            <Route
+              path="/CompletedOrders"
+              element={<ProtectedRoute element={<CompletedOrders />} allowedRoles={["admin"]} />}
+            />
             
             {/* Inventory: Admin full access, Staff read-only */}
             <Route path="/Inventory" element={<ProtectedRoute element={<Inventory />} />} />

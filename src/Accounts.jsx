@@ -1,9 +1,13 @@
 import "./Inventory.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);
   const [search, setSearch] = useState("");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("");
+  const [pendingAccountTypeFilter, setPendingAccountTypeFilter] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -37,6 +41,62 @@ function Accounts() {
   useEffect(() => {
     loadAccounts();
   }, []);
+
+  const typeOptions = useMemo(() => {
+    const types = accounts
+      .map((account) => account.account_type)
+      .filter((type) => Boolean(type && String(type).trim()));
+
+    return [...new Set(types)].sort((a, b) => String(a).localeCompare(String(b)));
+  }, [accounts]);
+
+  const sortedAccounts = useMemo(() => {
+    const filtered = accountTypeFilter
+      ? accounts.filter(
+          (account) =>
+            String(account.account_type || "").toLowerCase() ===
+            String(accountTypeFilter).toLowerCase()
+        )
+      : accounts;
+
+    const copy = [...filtered];
+
+    copy.sort((a, b) => {
+      const aValue = a?.[sortBy];
+      const bValue = b?.[sortBy];
+
+      if (aValue === null || aValue === undefined) return sortDirection === "asc" ? -1 : 1;
+      if (bValue === null || bValue === undefined) return sortDirection === "asc" ? 1 : -1;
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+
+      const aText = String(aValue).toLowerCase();
+      const bText = String(bValue).toLowerCase();
+      const compare = aText.localeCompare(bText, undefined, { numeric: true });
+      return sortDirection === "asc" ? compare : -compare;
+    });
+
+    return copy;
+  }, [accounts, accountTypeFilter, sortBy, sortDirection]);
+
+  function handleSort(column) {
+    setSortBy((prev) => {
+      if (prev === column) {
+        setSortDirection((dir) => (dir === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+
+      setSortDirection("asc");
+      return column;
+    });
+  }
+
+  function getSortIcon(column) {
+    if (sortBy !== column) return "";
+    return sortDirection === "asc" ? " ▲" : " ▼";
+  }
 
   async function handleDelete(account) {
     const ok = confirm(`Delete "${account.name}"?`);
@@ -120,7 +180,7 @@ function Accounts() {
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              loadProducts(search);
+              loadAccounts(search);
             }}
           >
             <input
@@ -147,17 +207,43 @@ function Accounts() {
               >
                 Filter
               </button>
-              <ul className="dropdown-menu">
-                <li>
-                  <button
-                    className="dropdown-item"
-                    type="button"
-                    onClick={() => loadProducts("")}
+              <div className="dropdown-menu p-3 inventory-filter-menu">
+                <div className="mb-3">
+                  <label className="form-label mb-1">Type</label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={pendingAccountTypeFilter}
+                    onChange={(e) => setPendingAccountTypeFilter(e.target.value)}
                   >
-                    Clear filter
+                    <option value="">All types</option>
+                    {typeOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    type="button"
+                    onClick={() => setAccountTypeFilter(pendingAccountTypeFilter)}
+                  >
+                    Apply
                   </button>
-                </li>
-              </ul>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    onClick={() => {
+                      setAccountTypeFilter("");
+                      setPendingAccountTypeFilter("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
 
@@ -171,60 +257,88 @@ function Accounts() {
           </div>
         </div>
 
-        {showForm && (
-          <form className="row g-2 px-4 pb-3" onSubmit={handleSubmit}>
-            <div className="col-md-4">
-              <input
-                className="form-control"
-                placeholder="Account Name"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              />
+        <div
+          className={`modal fade ${showForm ? "show" : ""}`}
+          id="accountFormModal"
+          tabIndex="-1"
+          aria-labelledby="accountFormModalLabel"
+          aria-hidden={!showForm}
+          style={{ display: showForm ? "block" : "none" }}
+        >
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title" id="accountFormModalLabel">
+                  {Number.isFinite(editingAccount) ? "Edit Account" : "Create Account"}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingAccount(null);
+                  }}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form className="row g-2" onSubmit={handleSubmit}>
+                  <div className="col-md-4">
+                    <input
+                      className="form-control"
+                      placeholder="Account Name"
+                      value={form.name}
+                      onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-3">
+                    <input
+                      className="form-control"
+                      placeholder="Email"
+                      value={form.email}
+                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-2">
+                    <input
+                      className="form-control"
+                      placeholder="Phone"
+                      value={form.phone}
+                      onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="col-md-3">
+                    <select
+                      className="form-select"
+                      value={form.account_type}
+                      onChange={(e) => setForm((prev) => ({ ...prev, account_type: e.target.value }))}
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="vendor">Vendor</option>
+                      <option value="staff">Staff</option>
+                    </select>
+                  </div>
+                  <div className="col-12 d-flex gap-2 justify-content-end mt-3">
+                    <button className="btn btn-primary" type="submit">
+                      {Number.isFinite(editingAccount) ? "Save" : "Add"}
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingAccount(null);
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-            <div className="col-md-3">
-              <input
-                className="form-control"
-                placeholder="Email"
-                value={form.email}
-                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-2">
-              <input
-                className="form-control"
-                placeholder="Phone"
-                value={form.phone}
-                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-            <div className="col-md-2">
-              <select
-                className="form-select"
-                value={form.account_type}
-                onChange={(e) => setForm((prev) => ({ ...prev, account_type: e.target.value }))}
-              >
-                <option value="customer">Customer</option>
-                <option value="vendor">Vendor</option>
-                <option value="staff">Staff</option>
-              </select>
-            </div>
-            <div className="col-md-1 d-grid gap-2 d-md-flex">
-              <button className="btn btn-primary" type="submit">
-                {Number.isFinite(editingAccount) ? "Save" : "Add"}
-              </button>
-              <button
-                className="btn btn-outline-secondary"
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingAccount(null);
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </form>
-        )}
+          </div>
+        </div>
+        {showForm && <div className="modal-backdrop fade show"></div>}
 
         <div className="px-4">
           {error && <div className="alert alert-danger py-2">{error}</div>}
@@ -235,19 +349,29 @@ function Accounts() {
           <table className="table">
             <thead className="table-secondary">
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
-                <th scope="col">Phone</th>
-                <th scope="col">Type</th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("id")}># {getSortIcon("id")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("name")}>Name{getSortIcon("name")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("email")}>Email{getSortIcon("email")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("phone")}>Phone{getSortIcon("phone")}</button>
+                </th>
+                <th scope="col">
+                  <button className="btn btn-link p-0 text-dark header-sort-btn" type="button" onClick={() => handleSort("account_type")}>Type{getSortIcon("account_type")}</button>
+                </th>
                 <th scope="col">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {accounts.map((account, idx) => (
+              {sortedAccounts.map((account) => (
                 <tr key={account.id}>
-                  <th scope="row">{idx + 1}</th>
+                  <th scope="row">{account.id}</th>
                   <td>{account.name}</td>
                   <td>{account.email || "-"}</td>
                   <td>{account.phone || "-"}</td>
@@ -275,7 +399,7 @@ function Accounts() {
                 </tr>
               ))}
 
-              {!loading && accounts.length === 0 && (
+              {!loading && sortedAccounts.length === 0 && (
                 <tr>
                   <td colSpan="5" className="text-center py-4">
                     No accounts found

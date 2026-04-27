@@ -34,9 +34,18 @@ function parseActiveQueryParam(raw) {
 router.get("/", async (req, res) => {
   const search = req.query.search?.trim() || "";
   const category = req.query.category?.trim() || "";
+  const supplierIdParam = req.query.supplier_id;
+  const supplierId =
+    supplierIdParam === undefined || supplierIdParam === null || supplierIdParam === ""
+      ? null
+      : Number.parseInt(supplierIdParam, 10);
   const active = parseActiveQueryParam(req.query.active);
   if (active === "invalid") {
     return res.status(400).json({ error: 'active must be "true", "false", or "all"' });
+  }
+
+  if (supplierId !== null && (!Number.isFinite(supplierId) || supplierId < 0)) {
+    return res.status(400).json({ error: "supplier_id must be a non-negative integer" });
   }
 
   const page = Math.max(parseInt(req.query.page || "1", 10), 1);
@@ -59,6 +68,11 @@ router.get("/", async (req, res) => {
   if (category) {
     values.push(category);
     where.push(`p.category = $${values.length}`);
+  }
+
+  if (supplierId !== null) {
+    values.push(supplierId);
+    where.push(`p.supplier_id = $${values.length}`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";

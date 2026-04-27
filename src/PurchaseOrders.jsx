@@ -1,4 +1,5 @@
 import IncomingOrder from "./IncomingOrder";
+import EditOrderModal from "./EditOrderModal";
 import LowStockCard from "./LowStockCard";
 import "./PurchaseOrders.css";
 import { useEffect, useState } from "react";
@@ -16,6 +17,9 @@ function PurchaseOrders() {
     deliveryDate: "",
   });
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [showEditOrderModal, setShowEditOrderModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -120,7 +124,13 @@ function PurchaseOrders() {
     }
   }
 
-  async function handleEdit(orderId, quantity, deliveryDate) {
+  function handleEdit(order) {
+    setEditingOrder(order);
+    setShowEditOrderModal(true);
+  }
+
+  async function handleSaveEdit(orderId, quantity, deliveryDate) {
+    setSavingEdit(true);
     try {
       const res = await fetch(`/api/purchase-orders/${orderId}`, {
         method: "PUT",
@@ -134,8 +144,12 @@ function PurchaseOrders() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to edit order");
       await loadData();
+      setShowEditOrderModal(false);
+      setEditingOrder(null);
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -318,6 +332,18 @@ function PurchaseOrders() {
           </div>
         </div>
       </div>
+
+      <EditOrderModal
+        show={showEditOrderModal}
+        order={editingOrder}
+        saving={savingEdit}
+        onClose={() => {
+          setShowEditOrderModal(false);
+          setEditingOrder(null);
+        }}
+        onSave={handleSaveEdit}
+      />
+
       {showCreateOrderModal && <div className="modal-backdrop fade show"></div>}
     </div>
   );

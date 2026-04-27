@@ -2,8 +2,24 @@ import { useEffect, useState } from "react";
 
 export default function EditProductForm({ product, onUpdated, onClose }) {
   const [form, setForm] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadSuppliers() {
+      try {
+        const res = await fetch("/api/suppliers");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Failed to load suppliers");
+        setSuppliers(data.data || []);
+      } catch (_err) {
+        setSuppliers([]);
+      }
+    }
+
+    loadSuppliers();
+  }, []);
 
   useEffect(() => {
     if (!product) return;
@@ -12,6 +28,7 @@ export default function EditProductForm({ product, onUpdated, onClose }) {
       sku: product.sku ?? "",
       name: product.name ?? "",
       category: product.category ?? "",
+      supplier_id: product.supplier_id ?? "",
       unit_price: product.unit_price ?? 0,
       unit_cost: product.unit_cost ?? 0,
       stock_on_hand: product.stock_on_hand ?? 0,
@@ -35,6 +52,7 @@ export default function EditProductForm({ product, onUpdated, onClose }) {
       sku: form.sku.trim(),
       name: form.name.trim(),
       category: form.category.trim() || null,
+      supplier_id: form.supplier_id ? parseInt(form.supplier_id, 10) : null,
       unit_price: Number(form.unit_price || 0),
       unit_cost: Number(form.unit_cost || 0),
       stock_on_hand: parseInt(form.stock_on_hand || "0", 10),
@@ -103,6 +121,22 @@ export default function EditProductForm({ product, onUpdated, onClose }) {
             value={form.category}
             onChange={(e) => setField("category", e.target.value)}
           />
+        </div>
+
+        <div className="col-md-6">
+          <label className="form-label">Supplier</label>
+          <select
+            className="form-select"
+            value={form.supplier_id ?? ""}
+            onChange={(e) => setField("supplier_id", e.target.value)}
+          >
+            <option value="">No supplier</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.id}>
+                {supplier.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="col-md-3">

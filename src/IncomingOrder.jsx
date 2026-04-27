@@ -1,9 +1,4 @@
-import { useState } from "react";
-
 function IncomingOrder({ order, onClaim, onDeny, onEdit }) {
-  const [qty, setQty] = useState(order.quantity);
-  const [date, setDate] = useState(order.expected_delivery_date?.slice(0, 10) || "");
-
   return (
     <div className="card mb-3">
       <div className="card-body">
@@ -31,29 +26,12 @@ function IncomingOrder({ order, onClaim, onDeny, onEdit }) {
                 <strong>Expected Delivery:</strong> {order.expected_delivery_date?.slice(0, 10)}
               </div>
             </div>
-            <div className="d-flex gap-2 mt-3">
-              <input
-                type="number"
-                min="1"
-                className="form-control"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                style={{ maxWidth: "180px" }}
-              />
-              <input
-                type="date"
-                className="form-control"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                style={{ maxWidth: "220px" }}
-              />
-            </div>
           </div>
           <div className="d-flex gap-2 flex-column">
             <button type="button" className="btn btn-success" onClick={() => onClaim(order.id)}>
               Claim
             </button>
-            <button type="button" className="btn btn-warning" onClick={() => onEdit(order.id, qty, date)}>
+            <button type="button" className="btn btn-warning" onClick={() => onEdit(order)}>
               Edit
             </button>
             <button type="button" className="btn btn-danger" onClick={() => onDeny(order.id)}>

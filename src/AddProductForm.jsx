@@ -1,16 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function AddProductForm({ onCreated, onClose }) {
+export default function AddProductForm({ onCreated, onClose, embedded = false }) {
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [unitCost, setUnitCost] = useState("");
   const [stock, setStock] = useState("");
   const [minStock, setMinStock] = useState("");
+  const [suppliers, setSuppliers] = useState([]);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadSuppliers() {
+      try {
+        const res = await fetch("/api/suppliers");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Failed to load suppliers");
+        setSuppliers(data.data || []);
+      } catch (_err) {
+        setSuppliers([]);
+      }
+    }
+
+    loadSuppliers();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -21,6 +38,7 @@ export default function AddProductForm({ onCreated, onClose }) {
       sku: sku.trim(),
       name: name.trim(),
       category: category.trim() || null,
+      supplier_id: supplierId ? parseInt(supplierId, 10) : null,
       unit_price: Number(unitPrice || 0),
       unit_cost: Number(unitCost || 0),
       stock_on_hand: parseInt(stock || "0", 10),
@@ -52,15 +70,8 @@ export default function AddProductForm({ onCreated, onClose }) {
     }
   }
 
-  return (
-    <div className="border rounded p-3 bg-white mx-4 mb-3">
-      <div className="d-flex justify-content-between align-items-center">
-        <h2 className="h5 mb-0">Add Product</h2>
-        <button className="btn btn-outline-secondary btn-sm" type="button" onClick={onClose}>
-          Close
-        </button>
-      </div>
-
+  const formContent = (
+    <>
       {error && <div className="alert alert-danger py-2 mt-2 mb-0">{error}</div>}
 
       <form className="row g-2 mt-2" onSubmit={handleSubmit}>
@@ -81,6 +92,22 @@ export default function AddProductForm({ onCreated, onClose }) {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           />
+        </div>
+
+        <div className="col-md-6">
+          <label className="form-label">Supplier</label>
+          <select
+            className="form-select"
+            value={supplierId}
+            onChange={(e) => setSupplierId(e.target.value)}
+          >
+            <option value="">No supplier</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.id}>
+                {supplier.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="col-md-3">
@@ -131,6 +158,21 @@ export default function AddProductForm({ onCreated, onClose }) {
           </button>
         </div>
       </form>
+    </>
+  );
+
+  if (embedded) return formContent;
+
+  return (
+    <div className="border rounded p-3 bg-white mx-4 mb-3">
+      <div className="d-flex justify-content-between align-items-center">
+        <h2 className="h5 mb-0">Add Product</h2>
+        <button className="btn btn-outline-secondary btn-sm" type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
+
+      {formContent}
     </div>
   );
 }

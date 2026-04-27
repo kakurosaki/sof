@@ -8,3 +8,16 @@
 tr{
   text-align: center;
 }
+
+.header-sort-btn {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.header-sort-btn:hover {
+  text-decoration: underline;
+}
+
+.inventory-filter-menu {
+  min-width: 260px;
+}
