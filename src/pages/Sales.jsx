@@ -1,8 +1,8 @@
-import SaleItemCard from "./SaleItemCard";
-import OrderItem from "./OrderItem";
+import SaleItemCard from "../components/cards/SaleItemCard";
+import OrderItem from "../orders/OrderItem";
 import "./Sales.css";
 import { useEffect, useMemo, useState } from "react";
-import { useToast } from "./ToastContext";
+import { useToast } from "../components/context/ToastContext";
 
 function Sales() {
   const [products, setProducts] = useState([]);

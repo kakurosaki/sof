@@ -1,6 +1,6 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
-import { useToast } from "./ToastContext";
+import { useToast } from "../components/context/ToastContext";
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);

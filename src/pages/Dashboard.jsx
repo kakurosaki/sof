@@ -1,6 +1,6 @@
 import "./Dashboard.css";
-import Numbercard from "./Numbercard";
-import Linechart from "./Linechart";
+import Numbercard from "../components/cards/Numbercard";
+import Linechart from "../components/cards/Linechart";
 import { useState, useEffect } from "react";
 
 function Dashboard() {

@@ -1,9 +1,9 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "./AuthContext";
-import { useToast } from "./ToastContext";
-import AddProductForm from "./AddProductForm";
-import EditProductForm from "./EditProductForm";
+import { useAuth } from "../components/context/AuthContext";
+import { useToast } from "../components/context/ToastContext";
+import AddProductForm from "../components/forms/AddProductForm";
+import EditProductForm from "../components/forms/EditProductForm";
 
 function Inventory() {
   const { user } = useAuth();

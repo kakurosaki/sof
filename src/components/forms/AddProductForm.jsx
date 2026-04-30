@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useToast } from "./ToastContext";
+import { useToast } from "../context/ToastContext";
 
 export default function AddProductForm({ onCreated, onClose, embedded = false }) {
   const [sku, setSku] = useState("");

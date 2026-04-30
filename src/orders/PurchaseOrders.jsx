@@ -1,9 +1,9 @@
-import IncomingOrder from "./IncomingOrder";
-import EditOrderModal from "./EditOrderModal";
-import LowStockCard from "./LowStockCard";
-import "./PurchaseOrders.css";
+import IncomingOrder from "../pages/IncomingOrder";
+import EditOrderModal from "../components/modals/EditOrderModal";
+import LowStockCard from "../LowStockCard";
+import "../pages/PurchaseOrders.css";
 import { useEffect, useState } from "react";
-import { useToast } from "./ToastContext";
+import { useToast } from "../components/context/ToastContext";
 
 function PurchaseOrders() {
   const [lowStock, setLowStock] = useState([]);

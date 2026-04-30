@@ -1,7 +1,7 @@
 import "./Inventory.css";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "./AuthContext";
-import { useToast } from "./ToastContext";
+import { useAuth } from "../components/context/AuthContext";
+import { useToast } from "../components/context/ToastContext";
 
 function Suppliers() {
   const { user } = useAuth();
