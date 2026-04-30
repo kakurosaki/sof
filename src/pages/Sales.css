@@ -1,0 +1,55 @@
+.sales {
+  background: linear-gradient(180deg, #d0e1cb 0%, #dbe8d5 45%, #e8f0e3 100%);
+  min-height: 100vh;
+}
+
+.sales-success-alert {
+  border: 1px solid #b9dbbe;
+  box-shadow: 0 8px 20px rgba(32, 79, 42, 0.08);
+}
+
+.sales-history {
+  margin-bottom: 1.25rem;
+}
+
+.sales-history-card {
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(26, 45, 29, 0.12);
+}
+
+.sales-history-card .card-header {
+  background: #f4f7f2;
+  border-bottom: 1px solid #dee8d8;
+}
+
+.sales-history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sales-history-item {
+  background: #fbfdf9;
+  border: 1px solid #d8e5d2;
+  border-radius: 10px;
+  padding: 0.8rem 0.95rem;
+}
+
+.sales-history-time {
+  color: #5d7160;
+  font-size: 0.88rem;
+}
+
+.sales-history-total {
+  margin: 0.3rem 0 0.4rem;
+  font-size: 0.92rem;
+  color: #1f5b2a;
+  font-weight: 600;
+}
+
+@media (max-width: 992px) {
+  .sales-history {
+    margin-top: 1rem;
+  }
+}

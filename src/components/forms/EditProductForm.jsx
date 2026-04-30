@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useToast } from "./ToastContext";
+import { useToast } from "../context/ToastContext";
 
 export default function EditProductForm({ product, onUpdated, onClose }) {
   const [form, setForm] = useState(null);

@@ -1,14 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./components/context/AuthContext";
 import Login from "./Login";
-import Sidebar from "./Sidebar";
-import Dashboard from "./Dashboard";
-import Inventory from "./Inventory";
-import Sales from "./Sales";
-import CompletedOrders from "./CompletedOrders";
-import PurchaseOrders from "./PurchaseOrders";
-import Accounts from "./Accounts";
-import Suppliers from "./Suppliers";
+import Sidebar from "./components/layout/Sidebar";
+import Dashboard from "./pages/Dashboard";
+import Inventory from "./pages/Inventory";
+import Sales from "./pages/Sales";
+import CompletedOrders from "./pages/CompletedOrders";
+import PurchaseOrders from "./orders/PurchaseOrders";
+import Accounts from "./pages/Accounts";
+import Suppliers from "./pages/Suppliers";
 
 function ProtectedRoute({ element, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -36,11 +36,6 @@ function App() {
   if (!user) {
     return <Login />;
   }
-
-  // Staff can only see Dashboard and Sales
-  // Admin can see everything
-  const isAdmin = user.account_type === "admin";
-  const isStaff = user.account_type === "staff";
 
   return (
     <BrowserRouter>
