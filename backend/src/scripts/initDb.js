@@ -77,6 +77,23 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders (status);
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_product ON purchase_orders (product_id);
 
+CREATE TABLE IF NOT EXISTS order_logs (
+  id SERIAL PRIMARY KEY,
+  purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
+  order_action TEXT NOT NULL CHECK (order_action IN ('claimed', 'denied')),
+  order_quantity INTEGER NOT NULL,
+  received_quantity INTEGER,
+  discrepancy INTEGER,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_logs_action ON order_logs (order_action);
+CREATE INDEX IF NOT EXISTS idx_order_logs_product ON order_logs (product_id);
+CREATE INDEX IF NOT EXISTS idx_order_logs_created ON order_logs (created_at);
+
 CREATE TABLE IF NOT EXISTS sales_orders (
   id SERIAL PRIMARY KEY,
   subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0,
@@ -193,7 +210,7 @@ WHERE p.sku = 'SKU-1005'
 async function seedAccounts(client) {
   const adminHash = await bcrypt.hash("admin123", 10);
   const staffHash = await bcrypt.hash("staff123", 10);
-  
+
   await client.query(
     `
     INSERT INTO accounts (name, email, phone, password_hash, account_type)
@@ -202,7 +219,7 @@ async function seedAccounts(client) {
       ('Staff User', 'staff@example.com', '+1-202-555-0201', $2, 'staff')
     ON CONFLICT (email) DO NOTHING
     `,
-    [adminHash, staffHash]
+    [adminHash, staffHash],
   );
 }
 

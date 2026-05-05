@@ -2,6 +2,7 @@
 -- PostgreSQL
 
 -- Drop existing tables (if needed for clean start)
+DROP TABLE IF EXISTS order_logs CASCADE;
 DROP TABLE IF EXISTS sales_order_items CASCADE;
 DROP TABLE IF EXISTS sales_orders CASCADE;
 DROP TABLE IF EXISTS inventory_movements CASCADE;
@@ -87,6 +88,24 @@ CREATE TABLE purchase_orders (
 
 CREATE INDEX idx_purchase_orders_status ON purchase_orders (status);
 CREATE INDEX idx_purchase_orders_product ON purchase_orders (product_id);
+
+-- Order Logs Table (tracks claimed and denied orders)
+CREATE TABLE order_logs (
+  id SERIAL PRIMARY KEY,
+  purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
+  order_action TEXT NOT NULL CHECK (order_action IN ('claimed', 'denied')),
+  order_quantity INTEGER NOT NULL,
+  received_quantity INTEGER,
+  discrepancy INTEGER,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_order_logs_action ON order_logs (order_action);
+CREATE INDEX idx_order_logs_product ON order_logs (product_id);
+CREATE INDEX idx_order_logs_created ON order_logs (created_at);
 
 -- Sales Orders Table
 CREATE TABLE sales_orders (

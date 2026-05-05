@@ -28,7 +28,7 @@ function Sidebar() {
           )}
         </div>
         <hr />
-        <ul className="nav nav-pills flex-column mb-auto text-center lead">
+        <ul className="nav nav-pills flex-column mb-auto text-start lead">
           <li className="nav-item">
             <NavLink
               to="/"
@@ -37,17 +37,6 @@ function Sidebar() {
               }
             >
               Dashboard
-            </NavLink>
-          </li>
-          <li className="nav-item">
-            <NavLink
-              to="/Inventory"
-              end
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Inventory {isStaff && <small>(Read-only)</small>}
             </NavLink>
           </li>
           <li className="nav-item">
@@ -70,10 +59,21 @@ function Sidebar() {
                   isActive ? "nav-link active" : "nav-link"
                 }
               >
-                Completed Orders
+                Completed Sales
               </NavLink>
             </li>
           )}
+          <li className="nav-item">
+            <NavLink
+              to="/Inventory"
+              end
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+            >
+              Inventory {isStaff && <small>(Read-only)</small>}
+            </NavLink>
+          </li>
           {isAdmin && (
             <li className="nav-item">
               <NavLink
@@ -90,13 +90,13 @@ function Sidebar() {
           {isAdmin && (
             <li className="nav-item">
               <NavLink
-                to="/Accounts"
+                to="/OrderInfos"
                 end
                 className={({ isActive }) =>
                   isActive ? "nav-link active" : "nav-link"
                 }
               >
-                Accounts
+                Order Infos
               </NavLink>
             </li>
           )}
@@ -111,6 +111,19 @@ function Sidebar() {
               Suppliers {isStaff && <small>(Read-only)</small>}
             </NavLink>
           </li>
+          {isAdmin && (
+            <li className="nav-item">
+              <NavLink
+                to="/Accounts"
+                end
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+              >
+                Accounts
+              </NavLink>
+            </li>
+          )}
         </ul>
         <div>
           <button

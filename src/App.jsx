@@ -7,6 +7,7 @@ import Inventory from "./Inventory";
 import Sales from "./Sales";
 import CompletedOrders from "./CompletedOrders";
 import PurchaseOrders from "./PurchaseOrders";
+import OrderInfos from "./OrderInfos";
 import Accounts from "./Accounts";
 import Suppliers from "./Suppliers";
 
@@ -49,37 +50,75 @@ function App() {
           <Sidebar />
           <Routes>
             <Route path="/login" element={<Navigate to="/" />} />
-            
+
             {/* Dashboard accessible to all */}
-            <Route path="/" element={<ProtectedRoute element={<Dashboard />} />} />
-            
+            <Route
+              path="/"
+              element={<ProtectedRoute element={<Dashboard />} />}
+            />
+
             {/* Sales accessible to all (Staff and Admin) */}
-            <Route path="/Sales" element={<ProtectedRoute element={<Sales />} />} />
+            <Route
+              path="/Sales"
+              element={<ProtectedRoute element={<Sales />} />}
+            />
 
             {/* Completed Orders: Admin only */}
             <Route
               path="/CompletedOrders"
-              element={<ProtectedRoute element={<CompletedOrders />} allowedRoles={["admin"]} />}
+              element={
+                <ProtectedRoute
+                  element={<CompletedOrders />}
+                  allowedRoles={["admin"]}
+                />
+              }
             />
-            
+
             {/* Inventory: Admin full access, Staff read-only */}
-            <Route path="/Inventory" element={<ProtectedRoute element={<Inventory />} />} />
-            
+            <Route
+              path="/Inventory"
+              element={<ProtectedRoute element={<Inventory />} />}
+            />
+
             {/* Purchase Orders: Admin only */}
             <Route
               path="/PurchaseOrders"
-              element={<ProtectedRoute element={<PurchaseOrders />} allowedRoles={["admin"]} />}
+              element={
+                <ProtectedRoute
+                  element={<PurchaseOrders />}
+                  allowedRoles={["admin"]}
+                />
+              }
             />
-            
+
+            {/* Order Infos: Admin only */}
+            <Route
+              path="/OrderInfos"
+              element={
+                <ProtectedRoute
+                  element={<OrderInfos />}
+                  allowedRoles={["admin"]}
+                />
+              }
+            />
+
             {/* Accounts: Admin only */}
             <Route
               path="/Accounts"
-              element={<ProtectedRoute element={<Accounts />} allowedRoles={["admin"]} />}
+              element={
+                <ProtectedRoute
+                  element={<Accounts />}
+                  allowedRoles={["admin"]}
+                />
+              }
             />
-            
+
             {/* Suppliers: Admin full access, Staff read-only */}
-            <Route path="/Suppliers" element={<ProtectedRoute element={<Suppliers />} />} />
-            
+            <Route
+              path="/Suppliers"
+              element={<ProtectedRoute element={<Suppliers />} />}
+            />
+
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

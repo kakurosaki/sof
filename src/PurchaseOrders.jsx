@@ -1,6 +1,6 @@
 import IncomingOrder from "./IncomingOrder";
 import EditOrderModal from "./EditOrderModal";
-import LowStockCard from "./LowStockCard";
+import ClaimOrderModal from "./ClaimOrderModal";
 import "./PurchaseOrders.css";
 import { useEffect, useState } from "react";
 import { useToast } from "./ToastContext";
@@ -21,6 +21,11 @@ function PurchaseOrders() {
   const [showEditOrderModal, setShowEditOrderModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showClaimOrderModal, setShowClaimOrderModal] = useState(false);
+  const [claimingOrder, setClaimingOrder] = useState(null);
+  const [claiming, setClaiming] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const { notify } = useToast();
 
   async function loadData() {
@@ -106,20 +111,35 @@ function PurchaseOrders() {
   }
 
   async function handleClaim(orderId) {
+    const order = incomingOrders.find((o) => o.id === orderId);
+    if (order) {
+      setClaimingOrder(order);
+      setShowClaimOrderModal(true);
+    }
+  }
+
+  async function handleConfirmClaim(orderId, unitsReceived) {
+    setClaiming(true);
     try {
       const res = await fetch(`/api/purchase-orders/${orderId}/claim`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ units_received: unitsReceived }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to claim order");
       notify({
         title: "Order claimed",
-        message: `Order #${orderId} was claimed and stock was updated.`,
+        message: `Order #${orderId} was claimed and stock was updated with ${unitsReceived} units.`,
         variant: "success",
       });
       await loadData();
+      setShowClaimOrderModal(false);
+      setClaimingOrder(null);
     } catch (e) {
       setError(e.message);
+    } finally {
+      setClaiming(false);
     }
   }
 
@@ -184,6 +204,19 @@ function PurchaseOrders() {
     );
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredLowStock.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLowStock = filteredLowStock.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   return (
     <div className="col-9 container-fluid purchase-orders p-0">
       <div className="">
@@ -215,27 +248,89 @@ function PurchaseOrders() {
         {error && <div className="alert alert-danger py-2">{error}</div>}
       </div>
 
-      <div
-        className="horizontal-scroll"
-        style={{
-          overflowX: "auto",
-          overflowY: "hidden",
-          padding: "20px",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "20px" }}>
-          {filteredLowStock.map((item) => (
-            <LowStockCard
-              key={item.id}
-              item={item}
-              onPlaceOrder={handlePlaceOrder}
-            />
-          ))}
-          {!loading && filteredLowStock.length === 0 && (
-            <div className="text-muted px-3">No low stock items found</div>
+      <div style={{ padding: "20px" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table className="table table-striped table-hover">
+            <thead className="table-dark">
+              <tr>
+                <th>Product Name</th>
+                <th>SKU</th>
+                <th>Current Stock</th>
+                <th>Min Stock Level</th>
+                <th>Shortage</th>
+                <th>Supplier</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedLowStock.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.name}</td>
+                  <td>{item.sku}</td>
+                  <td>{item.stock_on_hand}</td>
+                  <td>{item.min_stock_level}</td>
+                  <td>
+                    <span className="badge bg-danger">
+                      {item.min_stock_level - item.stock_on_hand}
+                    </span>
+                  </td>
+                  <td>{item.supplier_name || "N/A"}</td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => {
+                        setManualOrder({
+                          productId: String(item.id),
+                          quantity: String(
+                            item.min_stock_level - item.stock_on_hand,
+                          ),
+                          deliveryDate: "",
+                        });
+                        setShowCreateOrderModal(true);
+                      }}
+                    >
+                      Order
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && paginatedLowStock.length === 0 && (
+            <div className="text-muted text-center py-4">
+              No low stock items found
+            </div>
           )}
         </div>
+
+        {filteredLowStock.length > 0 && (
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <div className="text-muted small">
+              Showing {startIndex + 1} to{" "}
+              {Math.min(startIndex + itemsPerPage, filteredLowStock.length)} of{" "}
+              {filteredLowStock.length} items
+            </div>
+            <div className="btn-group">
+              <button
+                className="btn btn-outline-secondary"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </button>
+              <span className="btn btn-outline-secondary disabled">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className="btn btn-outline-secondary"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="">
@@ -364,6 +459,17 @@ function PurchaseOrders() {
           setEditingOrder(null);
         }}
         onSave={handleSaveEdit}
+      />
+
+      <ClaimOrderModal
+        show={showClaimOrderModal}
+        order={claimingOrder}
+        confirming={claiming}
+        onClose={() => {
+          setShowClaimOrderModal(false);
+          setClaimingOrder(null);
+        }}
+        onConfirm={handleConfirmClaim}
       />
 
       {showCreateOrderModal && <div className="modal-backdrop fade show"></div>}

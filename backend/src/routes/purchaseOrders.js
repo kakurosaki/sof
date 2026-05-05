@@ -20,7 +20,7 @@ router.get("/low-stock", async (_req, res) => {
       WHERE p.is_active = true
         AND p.stock_on_hand <= p.min_stock_level
       ORDER BY (p.min_stock_level - p.stock_on_hand) DESC, p.name ASC
-      `
+      `,
     );
 
     res.json({ count: result.rowCount, data: result.rows });
@@ -51,7 +51,7 @@ router.get("/incoming", async (_req, res) => {
       LEFT JOIN suppliers s ON s.id = po.supplier_id
       WHERE po.status = 'open'
       ORDER BY po.expected_delivery_date ASC, po.id DESC
-      `
+      `,
     );
 
     res.json({ count: result.rowCount, data: result.rows });
@@ -62,20 +62,39 @@ router.get("/incoming", async (_req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { product_id, supplier_id = null, quantity, expected_delivery_date, notes = null } = req.body || {};
+  const {
+    product_id,
+    supplier_id = null,
+    quantity,
+    expected_delivery_date,
+    notes = null,
+  } = req.body || {};
 
   const productId = Number.parseInt(product_id, 10);
-  const supplierId = supplier_id === null ? null : Number.parseInt(supplier_id, 10);
+  const supplierId =
+    supplier_id === null ? null : Number.parseInt(supplier_id, 10);
   const qty = Number.parseInt(quantity, 10);
 
-  if (!Number.isFinite(productId) || !Number.isFinite(qty) || qty <= 0 || !expected_delivery_date) {
+  if (
+    !Number.isFinite(productId) ||
+    !Number.isFinite(qty) ||
+    qty <= 0 ||
+    !expected_delivery_date
+  ) {
     return res.status(400).json({
-      error: "product_id, positive quantity, and expected_delivery_date are required",
+      error:
+        "product_id, positive quantity, and expected_delivery_date are required",
     });
   }
 
-  if (supplier_id !== null && supplier_id !== undefined && !Number.isFinite(supplierId)) {
-    return res.status(400).json({ error: "supplier_id must be a number or null" });
+  if (
+    supplier_id !== null &&
+    supplier_id !== undefined &&
+    !Number.isFinite(supplierId)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "supplier_id must be a number or null" });
   }
 
   try {
@@ -89,7 +108,7 @@ router.post("/", async (req, res) => {
         WHERE id = $1
           AND is_active = true
         `,
-        [productId]
+        [productId],
       );
 
       const product = productResult.rows[0];
@@ -107,7 +126,7 @@ router.post("/", async (req, res) => {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, product_id, supplier_id, quantity, expected_delivery_date, status, notes, created_at, updated_at
       `,
-      [productId, resolvedSupplierId, qty, expected_delivery_date, notes]
+      [productId, resolvedSupplierId, qty, expected_delivery_date, notes],
     );
 
     res.status(201).json(result.rows[0]);
@@ -119,13 +138,17 @@ router.post("/", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
   const id = Number.parseInt(req.params.id, 10);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   const { quantity, expected_delivery_date, notes } = req.body || {};
 
-  const qty = quantity === undefined ? undefined : Number.parseInt(quantity, 10);
+  const qty =
+    quantity === undefined ? undefined : Number.parseInt(quantity, 10);
   if (quantity !== undefined && (!Number.isFinite(qty) || qty <= 0)) {
-    return res.status(400).json({ error: "quantity must be a positive number" });
+    return res
+      .status(400)
+      .json({ error: "quantity must be a positive number" });
   }
 
   try {
@@ -141,7 +164,7 @@ router.put("/:id", async (req, res) => {
         AND status = 'open'
       RETURNING id, product_id, supplier_id, quantity, expected_delivery_date, status, notes, created_at, updated_at
       `,
-      [id, qty, expected_delivery_date, notes]
+      [id, qty, expected_delivery_date, notes],
     );
 
     if (!result.rows[0]) {
@@ -157,7 +180,14 @@ router.put("/:id", async (req, res) => {
 
 router.put("/:id/claim", async (req, res) => {
   const id = Number.parseInt(req.params.id, 10);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
+
+  const { units_received } = req.body || {};
+  let unitsToAdd =
+    units_received !== undefined
+      ? Number.parseInt(units_received, 10)
+      : undefined;
 
   const client = await pool.connect();
 
@@ -166,17 +196,27 @@ router.put("/:id/claim", async (req, res) => {
 
     const poResult = await client.query(
       `
-      SELECT id, product_id, quantity, status
+      SELECT id, product_id, quantity, supplier_id, status
       FROM purchase_orders
       WHERE id = $1
       FOR UPDATE
       `,
-      [id]
+      [id],
     );
 
     const po = poResult.rows[0];
     if (!po) throw new Error("Purchase order not found");
-    if (po.status !== "open") throw new Error("Only open purchase orders can be claimed");
+    if (po.status !== "open")
+      throw new Error("Only open purchase orders can be claimed");
+
+    // Use provided units_received or default to order quantity
+    if (!Number.isFinite(unitsToAdd)) {
+      unitsToAdd = Number(po.quantity);
+    }
+
+    if (unitsToAdd <= 0) {
+      throw new Error("Units received must be greater than 0");
+    }
 
     await client.query(
       `
@@ -185,7 +225,7 @@ router.put("/:id/claim", async (req, res) => {
           updated_at = now()
       WHERE id = $1
       `,
-      [po.product_id, po.quantity]
+      [po.product_id, unitsToAdd],
     );
 
     const productResult = await client.query(
@@ -194,11 +234,11 @@ router.put("/:id/claim", async (req, res) => {
       FROM products
       WHERE id = $1
       `,
-      [po.product_id]
+      [po.product_id],
     );
 
     const stockAfter = Number(productResult.rows[0]?.stock_on_hand || 0);
-    const stockBefore = stockAfter - Number(po.quantity);
+    const stockBefore = stockAfter - unitsToAdd;
 
     await client.query(
       `
@@ -206,7 +246,20 @@ router.put("/:id/claim", async (req, res) => {
         (product_id, source_type, source_id, quantity_change, stock_before, stock_after)
       VALUES ($1, 'purchase_order', $2, $3, $4, $5)
       `,
-      [po.product_id, id, Number(po.quantity), stockBefore, stockAfter]
+      [po.product_id, id, unitsToAdd, stockBefore, stockAfter],
+    );
+
+    // Calculate discrepancy
+    const discrepancy = unitsToAdd - Number(po.quantity);
+
+    // Log the order claim
+    await client.query(
+      `
+      INSERT INTO order_logs
+        (purchase_order_id, product_id, supplier_id, order_action, order_quantity, received_quantity, discrepancy)
+      VALUES ($1, $2, $3, 'claimed', $4, $5, $6)
+      `,
+      [id, po.product_id, po.supplier_id, po.quantity, unitsToAdd, discrepancy],
     );
 
     await client.query(
@@ -215,7 +268,7 @@ router.put("/:id/claim", async (req, res) => {
       SET status = 'claimed', updated_at = now()
       WHERE id = $1
       `,
-      [id]
+      [id],
     );
 
     await client.query("COMMIT");
@@ -230,28 +283,90 @@ router.put("/:id/claim", async (req, res) => {
 
 router.put("/:id/deny", async (req, res) => {
   const id = Number.parseInt(req.params.id, 10);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
+
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `
+      SELECT id, product_id, quantity, supplier_id, status
+      FROM purchase_orders
+      WHERE id = $1
+        AND status = 'open'
+      FOR UPDATE
+      `,
+      [id],
+    );
+
+    const po = result.rows[0];
+    if (!po) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Open purchase order not found" });
+    }
+
+    // Log the order denial
+    await client.query(
+      `
+      INSERT INTO order_logs
+        (purchase_order_id, product_id, supplier_id, order_action, order_quantity, received_quantity, discrepancy)
+      VALUES ($1, $2, $3, 'denied', $4, $5, $6)
+      `,
+      [id, po.product_id, po.supplier_id, po.quantity, 0, -po.quantity],
+    );
+
+    await client.query(
       `
       UPDATE purchase_orders
       SET status = 'denied', updated_at = now()
       WHERE id = $1
-        AND status = 'open'
-      RETURNING id
       `,
-      [id]
+      [id],
     );
 
-    if (!result.rows[0]) {
-      return res.status(404).json({ error: "Open purchase order not found" });
-    }
-
+    await client.query("COMMIT");
     res.json({ ok: true });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err);
     res.status(500).json({ error: "Failed to deny order" });
+  } finally {
+    client.release();
+  }
+});
+
+router.get("/logs/all", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        ol.id,
+        ol.purchase_order_id,
+        ol.product_id,
+        ol.supplier_id,
+        ol.order_action,
+        ol.order_quantity,
+        ol.received_quantity,
+        ol.discrepancy,
+        ol.notes,
+        ol.created_at,
+        p.sku,
+        p.name AS product_name,
+        s.name AS supplier_name
+      FROM order_logs ol
+      JOIN products p ON p.id = ol.product_id
+      LEFT JOIN suppliers s ON s.id = ol.supplier_id
+      ORDER BY ol.created_at DESC
+      `,
+    );
+
+    res.json({ count: result.rowCount, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch order logs" });
   }
 });
 
