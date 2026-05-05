@@ -1,0 +1,91 @@
+.purchase-orders {
+  background-color: #d0e1cb;
+}
+
+.low-stock-card-wrap {
+  flex: 0 0 auto;
+  width: 270px;
+  display: inline-block;
+}
+
+.low-stock-card {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 14px 28px rgba(19, 31, 27, 0.12);
+  overflow: hidden;
+}
+
+.low-stock-card-media {
+  height: 170px;
+  background: linear-gradient(130deg, #f4f8f6 0%, #e1ece6 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 12px;
+  color: #7b8a84;
+  font-size: 1.85rem;
+  font-weight: 600;
+}
+
+.low-stock-card-title {
+  font-size: 1.9rem;
+  line-height: 1.15;
+  margin-bottom: 0.85rem;
+}
+
+.low-stock-card-text {
+  font-size: 1.05rem;
+  margin-bottom: 0.55rem;
+}
+
+.custom-order-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 1080;
+}
+
+.custom-order-modal {
+  width: min(760px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+.custom-order-modal-header,
+.custom-order-modal-footer {
+  padding: 1rem 1.2rem;
+}
+
+.custom-order-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e7ece9;
+}
+
+.custom-order-modal-body {
+  padding: 1rem 1.2rem 0.6rem;
+}
+
+.custom-order-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  border-top: 1px solid #e7ece9;
+}
+
+@media (max-width: 768px) {
+  .low-stock-card-wrap {
+    width: 240px;
+  }
+
+  .low-stock-card-title {
+    font-size: 1.55rem;
+  }
+}
