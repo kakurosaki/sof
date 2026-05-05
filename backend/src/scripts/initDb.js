@@ -34,6 +34,17 @@ CREATE INDEX IF NOT EXISTS idx_products_active ON products (is_active);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products (category);
 CREATE INDEX IF NOT EXISTS idx_products_supplier ON products (supplier_id);
 
+CREATE TABLE IF NOT EXISTS product_suppliers (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  supplier_id INTEGER NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(product_id, supplier_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_product ON product_suppliers (product_id);
+CREATE INDEX IF NOT EXISTS idx_product_suppliers_supplier ON product_suppliers (supplier_id);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,

@@ -36,20 +36,29 @@ router.get("/", async (req, res) => {
   const category = req.query.category?.trim() || "";
   const supplierIdParam = req.query.supplier_id;
   const supplierId =
-    supplierIdParam === undefined || supplierIdParam === null || supplierIdParam === ""
+    supplierIdParam === undefined ||
+    supplierIdParam === null ||
+    supplierIdParam === ""
       ? null
       : Number.parseInt(supplierIdParam, 10);
   const active = parseActiveQueryParam(req.query.active);
   if (active === "invalid") {
-    return res.status(400).json({ error: 'active must be "true", "false", or "all"' });
+    return res
+      .status(400)
+      .json({ error: 'active must be "true", "false", or "all"' });
   }
 
   if (supplierId !== null && (!Number.isFinite(supplierId) || supplierId < 0)) {
-    return res.status(400).json({ error: "supplier_id must be a non-negative integer" });
+    return res
+      .status(400)
+      .json({ error: "supplier_id must be a non-negative integer" });
   }
 
   const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-  const limit = Math.min(Math.max(parseInt(req.query.limit || "20", 10), 1), 100);
+  const limit = Math.min(
+    Math.max(parseInt(req.query.limit || "20", 10), 1),
+    100,
+  );
   const offset = (page - 1) * limit;
 
   const where = [];
@@ -62,7 +71,9 @@ router.get("/", async (req, res) => {
 
   if (search) {
     values.push(`%${search}%`);
-    where.push(`(p.name ILIKE $${values.length} OR p.sku ILIKE $${values.length})`);
+    where.push(
+      `(p.name ILIKE $${values.length} OR p.sku ILIKE $${values.length})`,
+    );
   }
 
   if (category) {
@@ -97,7 +108,7 @@ router.get("/", async (req, res) => {
       ORDER BY p.id DESC
       LIMIT ${limitParam} OFFSET ${offsetParam}
       `,
-      values
+      values,
     );
 
     res.json({
@@ -115,7 +126,8 @@ router.get("/", async (req, res) => {
 // GET /api/products/:id
 router.get("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   try {
     const result = await pool.query(
@@ -127,7 +139,7 @@ router.get("/:id", async (req, res) => {
       LEFT JOIN suppliers s ON s.id = p.supplier_id
       WHERE p.id = $1
       `,
-      [id]
+      [id],
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });
@@ -146,6 +158,7 @@ router.post("/", async (req, res) => {
     description = null,
     category = null,
     supplier_id = null,
+    supplier_ids = null,
     unit_price = 0,
     unit_cost = 0,
     stock_on_hand = 0,
@@ -156,7 +169,8 @@ router.post("/", async (req, res) => {
   const cleanName = toTrimmedString(name);
   const cleanDescription = toTrimmedString(description);
   const cleanCategory = toTrimmedString(category);
-  const parsedSupplierId = supplier_id === null ? null : toNonNegativeInteger(supplier_id, null);
+  const parsedSupplierId =
+    supplier_id === null ? null : toNonNegativeInteger(supplier_id, null);
   const parsedUnitPrice = toNonNegativeNumber(unit_price, 0);
   const parsedUnitCost = toNonNegativeNumber(unit_cost, 0);
   const parsedStock = toNonNegativeInteger(stock_on_hand, 0);
@@ -171,15 +185,41 @@ router.post("/", async (req, res) => {
     parsedUnitCost === null ||
     parsedStock === null ||
     parsedMinStock === null ||
-    (supplier_id !== null && supplier_id !== undefined && parsedSupplierId === null)
+    (supplier_id !== null &&
+      supplier_id !== undefined &&
+      parsedSupplierId === null)
   ) {
     return res.status(400).json({
-      error: "unit_price, unit_cost, stock_on_hand, min_stock_level must be non-negative; supplier_id must be a non-negative integer or null",
+      error:
+        "unit_price, unit_cost, stock_on_hand, min_stock_level must be non-negative; supplier_id must be a non-negative integer or null",
     });
   }
 
+  // Validate supplier_ids if provided
+  const supplierIds = [];
+  if (supplier_ids) {
+    if (!Array.isArray(supplier_ids)) {
+      return res.status(400).json({ error: "supplier_ids must be an array" });
+    }
+    for (const sid of supplier_ids) {
+      const parsed = toNonNegativeInteger(sid, null);
+      if (parsed === null) {
+        return res
+          .status(400)
+          .json({ error: "All supplier_ids must be non-negative integers" });
+      }
+      supplierIds.push(parsed);
+    }
+  } else if (parsedSupplierId !== null) {
+    supplierIds.push(parsedSupplierId);
+  }
+
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       `
       INSERT INTO products
         (sku, name, description, category, supplier_id, unit_price, unit_cost, stock_on_hand, min_stock_level)
@@ -192,26 +232,46 @@ router.post("/", async (req, res) => {
         cleanName,
         cleanDescription,
         cleanCategory,
-        parsedSupplierId,
+        supplierIds.length > 0 ? supplierIds[0] : null,
         parsedUnitPrice,
         parsedUnitCost,
         parsedStock,
         parsedMinStock,
-      ]
+      ],
     );
 
+    const productId = result.rows[0].id;
+
+    // Insert all supplier relationships
+    for (const sid of supplierIds) {
+      await client.query(
+        `
+        INSERT INTO product_suppliers (product_id, supplier_id)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING
+        `,
+        [productId, sid],
+      );
+    }
+
+    await client.query("COMMIT");
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    if (err.code === "23505") return res.status(409).json({ error: "SKU already exists" });
+    await client.query("ROLLBACK");
+    if (err.code === "23505")
+      return res.status(409).json({ error: "SKU already exists" });
     console.error(err);
     res.status(500).json({ error: "Failed to create product" });
+  } finally {
+    client.release();
   }
 });
 
 // PUT /api/products/:id
 router.put("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   const {
     sku,
@@ -228,8 +288,10 @@ router.put("/:id", async (req, res) => {
 
   const cleanSku = sku === undefined ? undefined : toTrimmedString(sku);
   const cleanName = name === undefined ? undefined : toTrimmedString(name);
-  const cleanDescription = description === undefined ? undefined : toTrimmedString(description);
-  const cleanCategory = category === undefined ? undefined : toTrimmedString(category);
+  const cleanDescription =
+    description === undefined ? undefined : toTrimmedString(description);
+  const cleanCategory =
+    category === undefined ? undefined : toTrimmedString(category);
 
   const parsedSupplierId =
     supplier_id === undefined
@@ -239,27 +301,38 @@ router.put("/:id", async (req, res) => {
         : toNonNegativeInteger(supplier_id, null);
 
   const parsedUnitPrice =
-    unit_price === undefined ? undefined : toNonNegativeNumber(unit_price, null);
+    unit_price === undefined
+      ? undefined
+      : toNonNegativeNumber(unit_price, null);
   const parsedUnitCost =
     unit_cost === undefined ? undefined : toNonNegativeNumber(unit_cost, null);
   const parsedStock =
-    stock_on_hand === undefined ? undefined : toNonNegativeInteger(stock_on_hand, null);
+    stock_on_hand === undefined
+      ? undefined
+      : toNonNegativeInteger(stock_on_hand, null);
   const parsedMinStock =
-    min_stock_level === undefined ? undefined : toNonNegativeInteger(min_stock_level, null);
+    min_stock_level === undefined
+      ? undefined
+      : toNonNegativeInteger(min_stock_level, null);
 
   if ((sku !== undefined && !cleanSku) || (name !== undefined && !cleanName)) {
-    return res.status(400).json({ error: "sku and name cannot be empty when provided" });
+    return res
+      .status(400)
+      .json({ error: "sku and name cannot be empty when provided" });
   }
 
   if (
-    (supplier_id !== undefined && parsedSupplierId === null && supplier_id !== null) ||
+    (supplier_id !== undefined &&
+      parsedSupplierId === null &&
+      supplier_id !== null) ||
     (unit_price !== undefined && parsedUnitPrice === null) ||
     (unit_cost !== undefined && parsedUnitCost === null) ||
     (stock_on_hand !== undefined && parsedStock === null) ||
     (min_stock_level !== undefined && parsedMinStock === null)
   ) {
     return res.status(400).json({
-      error: "Invalid update payload: numeric fields must be non-negative and supplier_id must be a non-negative integer or null",
+      error:
+        "Invalid update payload: numeric fields must be non-negative and supplier_id must be a non-negative integer or null",
     });
   }
 
@@ -298,13 +371,14 @@ router.put("/:id", async (req, res) => {
         parsedStock,
         parsedMinStock,
         is_active,
-      ]
+      ],
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });
     res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === "23505") return res.status(409).json({ error: "SKU already exists" });
+    if (err.code === "23505")
+      return res.status(409).json({ error: "SKU already exists" });
     console.error(err);
     res.status(500).json({ error: "Failed to update product" });
   }
@@ -313,7 +387,8 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/products/:id
 router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
+  if (!Number.isFinite(id))
+    return res.status(400).json({ error: "Invalid id" });
 
   try {
     const result = await pool.query(
@@ -323,7 +398,7 @@ router.delete("/:id", async (req, res) => {
       WHERE id = $1
       RETURNING id
       `,
-      [id]
+      [id],
     );
 
     if (!result.rows[0]) return res.status(404).json({ error: "Not found" });

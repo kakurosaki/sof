@@ -43,6 +43,18 @@ CREATE INDEX idx_products_active ON products (is_active);
 CREATE INDEX idx_products_category ON products (category);
 CREATE INDEX idx_products_supplier ON products (supplier_id);
 
+-- Product Suppliers Junction Table
+CREATE TABLE product_suppliers (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  supplier_id INTEGER NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(product_id, supplier_id)
+);
+
+CREATE INDEX idx_product_suppliers_product ON product_suppliers (product_id);
+CREATE INDEX idx_product_suppliers_supplier ON product_suppliers (supplier_id);
+
 -- Accounts Table (Users)
 CREATE TABLE accounts (
   id SERIAL PRIMARY KEY,
