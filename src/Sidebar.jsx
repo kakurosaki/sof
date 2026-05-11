@@ -21,7 +21,7 @@ function Sidebar() {
           <h1 className="display-6 text-center">Relly's System</h1>
           {user && (
             <div className="text-center mt-2">
-              <small className="text-muted">{user.name}</small>
+              <small className="text-white">{user.name}</small>
               <br />
               <small className="badge bg-info">{user.account_type}</small>
             </div>
@@ -96,7 +96,7 @@ function Sidebar() {
                   isActive ? "nav-link active" : "nav-link"
                 }
               >
-                Order Infos
+                Order Information
               </NavLink>
             </li>
           )}
