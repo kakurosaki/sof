@@ -1,0 +1,119 @@
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background-color: #ffffff !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: none;
+  position: relative;
+  z-index: 10000;
+  padding: 1.5rem;
+}
+
+.checkout-modal {
+  min-width: 450px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #ffffff !important;
+}
+
+.modal-title {
+  margin: 0;
+  font-weight: 600;
+  color: #333 !important;
+}
+
+.btn-close {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: #6c757d;
+}
+
+.btn-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  background-color: #ffffff !important;
+  color: #333;
+}
+
+.checkout-section {
+  margin-bottom: 1rem;
+}
+
+.checkout-section h6 {
+  font-weight: 600;
+  color: #333;
+}
+
+.checkout-section table {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  background-color: white !important;
+}
+
+.checkout-section table thead {
+  background-color: #f8f9fa !important;
+}
+
+.checkout-section table th {
+  border-top: none;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.checkout-section table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+  background-color: white !important;
+}
+
+.checkout-section table td {
+  color: #333;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-top: 1px solid #dee2e6;
+  background-color: #ffffff !important;
+}
+
+.modal-footer button {
+  min-width: 100px;
+}
+
+@media (max-width: 600px) {
+  .checkout-modal {
+    min-width: auto;
+    width: 95%;
+  }
+}

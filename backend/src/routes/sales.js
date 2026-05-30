@@ -5,7 +5,9 @@ const router = Router();
 
 router.get("/orders", async (req, res) => {
   const rawLimit = Number.parseInt(req.query.limit || "20", 10);
-  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 20;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(rawLimit, 1), 100)
+    : 20;
 
   try {
     const result = await pool.query(
@@ -35,7 +37,7 @@ router.get("/orders", async (req, res) => {
       ORDER BY so.created_at DESC
       LIMIT $1
       `,
-      [limit]
+      [limit],
     );
 
     res.json({ count: result.rowCount, data: result.rows });
@@ -54,7 +56,9 @@ router.get("/products", async (req, res) => {
 
   if (search) {
     values.push(`%${search}%`);
-    where.push(`(p.name ILIKE $${values.length} OR p.sku ILIKE $${values.length})`);
+    where.push(
+      `(p.name ILIKE $${values.length} OR p.sku ILIKE $${values.length})`,
+    );
   }
 
   if (category) {
@@ -72,12 +76,13 @@ router.get("/products", async (req, res) => {
         p.description,
         p.category,
         p.unit_price,
-        p.stock_on_hand
+        p.stock_on_hand,
+        p.image_url
       FROM products p
       WHERE ${where.join(" AND ")}
       ORDER BY p.name ASC
       `,
-      values
+      values,
     );
 
     res.json({ count: result.rowCount, data: result.rows });
@@ -88,21 +93,34 @@ router.get("/products", async (req, res) => {
 });
 
 router.post("/checkout", async (req, res) => {
-  const { items } = req.body || {};
+  const { items, cash_received, discount_applied } = req.body || {};
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items array is required" });
   }
+
+  const cashReceived =
+    cash_received !== undefined ? Number(cash_received) : null;
+  const hasDiscount = Boolean(discount_applied);
 
   const normalizedItems = items
     .map((item) => ({
       product_id: Number.parseInt(item?.product_id, 10),
       quantity: Number.parseInt(item?.quantity, 10),
     }))
-    .filter((item) => Number.isFinite(item.product_id) && Number.isFinite(item.quantity) && item.quantity > 0);
+    .filter(
+      (item) =>
+        Number.isFinite(item.product_id) &&
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0,
+    );
 
   if (normalizedItems.length === 0) {
-    return res.status(400).json({ error: "items must contain valid product_id and positive quantity" });
+    return res
+      .status(400)
+      .json({
+        error: "items must contain valid product_id and positive quantity",
+      });
   }
 
   const client = await pool.connect();
@@ -112,7 +130,10 @@ router.post("/checkout", async (req, res) => {
 
     const merged = new Map();
     for (const item of normalizedItems) {
-      merged.set(item.product_id, (merged.get(item.product_id) || 0) + item.quantity);
+      merged.set(
+        item.product_id,
+        (merged.get(item.product_id) || 0) + item.quantity,
+      );
     }
 
     const productIds = Array.from(merged.keys());
@@ -125,10 +146,12 @@ router.post("/checkout", async (req, res) => {
         AND is_active = true
       FOR UPDATE
       `,
-      [productIds]
+      [productIds],
     );
 
-    const productMap = new Map(productsResult.rows.map((row) => [Number(row.id), row]));
+    const productMap = new Map(
+      productsResult.rows.map((row) => [Number(row.id), row]),
+    );
 
     for (const [productId, qty] of merged.entries()) {
       const product = productMap.get(Number(productId));
@@ -150,7 +173,15 @@ router.post("/checkout", async (req, res) => {
       const stockAfter = stockBefore - qty;
       const lineTotal = Number((unitPrice * qty).toFixed(2));
       subtotal += lineTotal;
-      lineItems.push({ productId, qty, unitPrice, lineTotal, name: product.name, stockBefore, stockAfter });
+      lineItems.push({
+        productId,
+        qty,
+        unitPrice,
+        lineTotal,
+        name: product.name,
+        stockBefore,
+        stockAfter,
+      });
 
       await client.query(
         `
@@ -159,19 +190,26 @@ router.post("/checkout", async (req, res) => {
             updated_at = now()
         WHERE id = $1
         `,
-        [productId, qty]
+        [productId, qty],
       );
     }
 
     subtotal = Number(subtotal.toFixed(2));
 
+    // Calculate total with discount
+    let total = subtotal;
+    if (hasDiscount) {
+      const discountAmount = Number((subtotal * 0.05).toFixed(2));
+      total = Number((subtotal - discountAmount).toFixed(2));
+    }
+
     const orderResult = await client.query(
       `
-      INSERT INTO sales_orders (subtotal, total)
-      VALUES ($1, $1)
-      RETURNING id, subtotal, total, created_at
+      INSERT INTO sales_orders (subtotal, total, cash_received, discount_applied)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, subtotal, total, cash_received, discount_applied, created_at
       `,
-      [subtotal]
+      [subtotal, total, cashReceived, hasDiscount],
     );
 
     const order = orderResult.rows[0];
@@ -183,7 +221,13 @@ router.post("/checkout", async (req, res) => {
           (product_id, source_type, source_id, quantity_change, stock_before, stock_after)
         VALUES ($1, 'sale', $2, $3, $4, $5)
         `,
-        [line.productId, order.id, -line.qty, line.stockBefore, line.stockAfter]
+        [
+          line.productId,
+          order.id,
+          -line.qty,
+          line.stockBefore,
+          line.stockAfter,
+        ],
       );
     }
 
@@ -194,7 +238,7 @@ router.post("/checkout", async (req, res) => {
           (sales_order_id, product_id, quantity, unit_price, line_total)
         VALUES ($1, $2, $3, $4, $5)
         `,
-        [order.id, line.productId, line.qty, line.unitPrice, line.lineTotal]
+        [order.id, line.productId, line.qty, line.unitPrice, line.lineTotal],
       );
     }
 

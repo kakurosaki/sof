@@ -101,10 +101,17 @@ router.get("/", async (req, res) => {
         p.unit_price, p.unit_cost,
         p.stock_on_hand, p.min_stock_level,
         p.is_active, p.created_at, p.updated_at,
-        s.id AS supplier_id, s.name AS supplier_name
+        s.id AS supplier_id, s.name AS supplier_name,
+        json_agg(
+          json_build_object('id', ps.supplier_id, 'name', ps2.name)
+          ORDER BY ps.supplier_id
+        ) FILTER (WHERE ps.supplier_id IS NOT NULL) AS suppliers
       FROM products p
       LEFT JOIN suppliers s ON s.id = p.supplier_id
+      LEFT JOIN product_suppliers ps ON ps.product_id = p.id
+      LEFT JOIN suppliers ps2 ON ps2.id = ps.supplier_id
       ${whereSql}
+      GROUP BY p.id, s.id, s.name
       ORDER BY p.id DESC
       LIMIT ${limitParam} OFFSET ${offsetParam}
       `,
@@ -134,10 +141,17 @@ router.get("/:id", async (req, res) => {
       `
       SELECT
         p.*,
-        s.name AS supplier_name
+        s.name AS supplier_name,
+        json_agg(
+          json_build_object('id', ps.supplier_id, 'name', ps2.name)
+          ORDER BY ps.supplier_id
+        ) FILTER (WHERE ps.supplier_id IS NOT NULL) AS suppliers
       FROM products p
       LEFT JOIN suppliers s ON s.id = p.supplier_id
+      LEFT JOIN product_suppliers ps ON ps.product_id = p.id
+      LEFT JOIN suppliers ps2 ON ps2.id = ps.supplier_id
       WHERE p.id = $1
+      GROUP BY p.id, s.id, s.name
       `,
       [id],
     );
@@ -163,12 +177,14 @@ router.post("/", async (req, res) => {
     unit_cost = 0,
     stock_on_hand = 0,
     min_stock_level = 0,
+    image_url = null,
   } = req.body || {};
 
   const cleanSku = toTrimmedString(sku);
   const cleanName = toTrimmedString(name);
   const cleanDescription = toTrimmedString(description);
   const cleanCategory = toTrimmedString(category);
+  const cleanImageUrl = toTrimmedString(image_url);
   const parsedSupplierId =
     supplier_id === null ? null : toNonNegativeInteger(supplier_id, null);
   const parsedUnitPrice = toNonNegativeNumber(unit_price, 0);
@@ -222,9 +238,9 @@ router.post("/", async (req, res) => {
     const result = await client.query(
       `
       INSERT INTO products
-        (sku, name, description, category, supplier_id, unit_price, unit_cost, stock_on_hand, min_stock_level)
+        (sku, name, description, category, supplier_id, unit_price, unit_cost, stock_on_hand, min_stock_level, image_url)
       VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *
       `,
       [
@@ -237,6 +253,7 @@ router.post("/", async (req, res) => {
         parsedUnitCost,
         parsedStock,
         parsedMinStock,
+        cleanImageUrl,
       ],
     );
 

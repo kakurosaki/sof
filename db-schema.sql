@@ -34,6 +34,7 @@ CREATE TABLE products (
   unit_cost NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (unit_cost >= 0),
   stock_on_hand INTEGER NOT NULL DEFAULT 0 CHECK (stock_on_hand >= 0),
   min_stock_level INTEGER NOT NULL DEFAULT 0 CHECK (min_stock_level >= 0),
+  image_url TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -124,6 +125,8 @@ CREATE TABLE sales_orders (
   id SERIAL PRIMARY KEY,
   subtotal NUMERIC(12, 2) NOT NULL DEFAULT 0,
   total NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  cash_received NUMERIC(12, 2),
+  discount_applied BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

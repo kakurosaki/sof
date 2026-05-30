@@ -20,6 +20,7 @@ function Inventory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [expandedSuppliers, setExpandedSuppliers] = useState({});
 
   const [editingProduct, setEditingProduct] = useState(null);
   const { notify } = useToast();
@@ -402,7 +403,42 @@ function Inventory() {
                   <td>{p.sku}</td>
                   <td>{p.name}</td>
                   <td>{p.category || "-"}</td>
-                  <td>{p.supplier_name || "-"}</td>
+                  <td>
+                    {p.suppliers && p.suppliers.length > 0 ? (
+                      <div className="dropdown">
+                        <button
+                          className="btn btn-sm btn-outline-secondary dropdown-toggle"
+                          type="button"
+                          data-bs-toggle="dropdown"
+                          aria-expanded={expandedSuppliers[p.id] || false}
+                          onClick={() =>
+                            setExpandedSuppliers((prev) => ({
+                              ...prev,
+                              [p.id]: !prev[p.id],
+                            }))
+                          }
+                        >
+                          {p.suppliers[0]?.name}
+                          {p.suppliers.length > 1 &&
+                            ` +${p.suppliers.length - 1}`}
+                        </button>
+                        <ul className="dropdown-menu">
+                          {p.suppliers.map((supplier) => (
+                            <li key={supplier.id}>
+                              <span
+                                className="dropdown-item"
+                                style={{ cursor: "default" }}
+                              >
+                                {supplier.name}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td>{p.stock_on_hand}</td>
                   <td>{p.min_stock_level}</td>
                   <td>{p.unit_price}</td>

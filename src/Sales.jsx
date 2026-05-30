@@ -1,5 +1,6 @@
 import SaleItemCard from "./SaleItemCard";
 import OrderItem from "./OrderItem";
+import CheckoutModal from "./CheckoutModal";
 import "./Sales.css";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "./ToastContext";
@@ -13,10 +14,13 @@ function Sales() {
   const [cart, setCart] = useState([]);
   const [checkingOut, setCheckingOut] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const { notify } = useToast();
 
   const categories = useMemo(() => {
-    const list = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+    const list = Array.from(
+      new Set(products.map((p) => p.category).filter(Boolean)),
+    );
     return list.sort((a, b) => a.localeCompare(b));
   }, [products]);
 
@@ -31,7 +35,8 @@ function Sales() {
     try {
       const res = await fetch(`/api/sales/products?${params.toString()}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to load sales products");
+      if (!res.ok)
+        throw new Error(json?.error || "Failed to load sales products");
       setProducts(json.data || []);
     } catch (e) {
       setError(e.message);
@@ -49,7 +54,9 @@ function Sales() {
       const existing = prev.find((item) => item.product_id === product.id);
       if (existing) {
         return prev.map((item) =>
-          item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
+          item.product_id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item,
         );
       }
       return [
@@ -79,22 +86,36 @@ function Sales() {
     setCart((prev) =>
       prev
         .map((item) =>
-          item.product_id === productId ? { ...item, quantity: item.quantity + delta } : item,
+          item.product_id === productId
+            ? { ...item, quantity: item.quantity + delta }
+            : item,
         )
         .filter((item) => item.quantity > 0),
     );
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + item.quantity * Number(item.unit_price), 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.quantity * Number(item.unit_price),
+    0,
+  );
 
-  async function handleCheckout() {
+  function handleCheckout() {
     if (cart.length === 0) return;
+    setShowCheckoutModal(true);
+  }
+
+  async function handleConfirmCheckout(checkoutData) {
     setCheckingOut(true);
     setError("");
 
     try {
       const payload = {
-        items: cart.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
+        items: cart.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        })),
+        cash_received: checkoutData.cash_received,
+        discount_applied: checkoutData.discount_applied,
       };
 
       const res = await fetch("/api/sales/checkout", {
@@ -108,6 +129,7 @@ function Sales() {
 
       setLastOrder(json);
       setCart([]);
+      setShowCheckoutModal(false);
       notify({
         title: "Checkout complete",
         message: `Order #${json?.order?.id} was saved successfully.`,
@@ -137,7 +159,14 @@ function Sales() {
             </button>
             <ul className="dropdown-menu" aria-labelledby="salesDropdown">
               <li>
-                <button className="dropdown-item" type="button" onClick={() => { setCategory(""); loadProducts(search, ""); }}>
+                <button
+                  className="dropdown-item"
+                  type="button"
+                  onClick={() => {
+                    setCategory("");
+                    loadProducts(search, "");
+                  }}
+                >
                   All categories
                 </button>
               </li>
@@ -173,7 +202,11 @@ function Sales() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn btn-outline-success" type="submit" disabled={loading}>
+            <button
+              className="btn btn-outline-success"
+              type="submit"
+              disabled={loading}
+            >
               Search
             </button>
           </form>
@@ -188,13 +221,17 @@ function Sales() {
         <div className="px-3">
           <div className="alert alert-success sales-success-alert">
             <div className="fw-semibold mb-1">Order saved successfully</div>
-            <div>Order #{lastOrder.order?.id} has been recorded and inventory was updated.</div>
+            <div>
+              Order #{lastOrder.order?.id} has been recorded and inventory was
+              updated.
+            </div>
             <div className="mt-2">
               <div className="fw-semibold">Items</div>
               <ul className="mb-0">
                 {lastOrder.items?.map((item) => (
                   <li key={`${item.product_id}-${item.name}`}>
-                    {item.name}: {item.quantity} units at ${Number(item.unit_price).toFixed(2)} each
+                    {item.name}: {item.quantity} units at $
+                    {Number(item.unit_price).toFixed(2)} each
                   </li>
                 ))}
               </ul>
@@ -207,18 +244,31 @@ function Sales() {
         <div className="container-fluid col-8">
           <div className="mt-5 d-flex flex-wrap gap-3 justify-content-center">
             {loading && <div className="text-muted">Loading products...</div>}
-            {!loading && products.map((product) => (
-              <SaleItemCard key={product.id} product={product} onAdd={addToCart} />
-            ))}
-            {!loading && products.length === 0 && <div className="text-muted">No products found</div>}
+            {!loading &&
+              products.map((product) => (
+                <SaleItemCard
+                  key={product.id}
+                  product={product}
+                  onAdd={addToCart}
+                />
+              ))}
+            {!loading && products.length === 0 && (
+              <div className="text-muted">No products found</div>
+            )}
           </div>
         </div>
         <div className="container-fluid col-4 m-0 p-0">
-          <div className="card mt-5 position-sticky" style={{ top: "2rem", zIndex: 2 }}>
+          <div
+            className="card mt-5 position-sticky"
+            style={{ top: "2rem", zIndex: 2 }}
+          >
             <div className="card-header">
               <strong>Order Overview</strong>
             </div>
-            <ul className="list-group list-group-flush" style={{ maxHeight: "400px", overflowY: "auto" }}>
+            <ul
+              className="list-group list-group-flush"
+              style={{ maxHeight: "400px", overflowY: "auto" }}
+            >
               {cart.map((item) => (
                 <OrderItem
                   key={item.product_id}
@@ -227,7 +277,9 @@ function Sales() {
                   onIncrease={(productId) => changeCartQuantity(productId, 1)}
                 />
               ))}
-              {cart.length === 0 && <li className="list-group-item text-muted">No items yet</li>}
+              {cart.length === 0 && (
+                <li className="list-group-item text-muted">No items yet</li>
+              )}
             </ul>
             <div className="card-body">
               <div className="d-flex justify-content-between mb-2">
@@ -251,6 +303,13 @@ function Sales() {
         </div>
       </div>
 
+      <CheckoutModal
+        show={showCheckoutModal}
+        cart={cart}
+        onClose={() => setShowCheckoutModal(false)}
+        onConfirm={handleConfirmCheckout}
+        processing={checkingOut}
+      />
     </div>
   );
 }

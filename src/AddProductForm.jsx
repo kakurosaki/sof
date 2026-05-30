@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToast } from "./ToastContext";
+import "./AddProductForm.css";
 
 export default function AddProductForm({
   onCreated,
@@ -16,6 +17,7 @@ export default function AddProductForm({
   const [stock, setStock] = useState("");
   const [minStock, setMinStock] = useState("");
   const [suppliers, setSuppliers] = useState([]);
+  const [imageUrl, setImageUrl] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +52,21 @@ export default function AddProductForm({
     setSelectedSuppliers(selectedSuppliers.filter((id) => id !== supplierId));
   }
 
+  function handleImageChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImageUrl(event.target?.result || "");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage() {
+    setImageUrl("");
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -64,6 +81,7 @@ export default function AddProductForm({
       unit_cost: Number(unitCost || 0),
       stock_on_hand: parseInt(stock || "0", 10),
       min_stock_level: parseInt(minStock || "0", 10),
+      image_url: imageUrl || null,
     };
 
     if (!payload.sku || !payload.name) {
@@ -177,6 +195,36 @@ export default function AddProductForm({
           )}
         </div>
 
+        <div className="col-md-6">
+          <label className="form-label">Product Image</label>
+          <input
+            className="form-control"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+          />
+          {imageUrl && (
+            <div className="mt-2">
+              <img
+                src={imageUrl}
+                alt="Product preview"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "150px",
+                  borderRadius: "4px",
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger mt-2"
+                onClick={clearImage}
+              >
+                Remove Image
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="col-md-3">
           <label className="form-label">Unit Price</label>
           <input
@@ -231,19 +279,21 @@ export default function AddProductForm({
   if (embedded) return formContent;
 
   return (
-    <div className="border rounded p-3 bg-white mx-4 mb-3">
-      <div className="d-flex justify-content-between align-items-center">
-        <h2 className="h5 mb-0">Add Product</h2>
-        <button
-          className="btn btn-outline-secondary btn-sm"
-          type="button"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
+    <div className="add-product-container">
+      <div className="add-product-card">
+        <div className="d-flex justify-content-between align-items-center">
+          <h2 className="h5 mb-0">Add Product</h2>
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            type="button"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
 
-      {formContent}
+        {formContent}
+      </div>
     </div>
   );
 }
