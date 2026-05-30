@@ -175,7 +175,9 @@ function Accounts() {
       if (!res.ok) throw new Error(json?.error || "Failed to save account");
 
       notify({
-        title: Number.isFinite(editingAccount) ? "Account updated" : "Account created",
+        title: Number.isFinite(editingAccount)
+          ? "Account updated"
+          : "Account created",
         message: `${payload.name} was saved successfully.`,
         variant: Number.isFinite(editingAccount) ? "info" : "success",
       });
@@ -346,8 +348,6 @@ function Accounts() {
                         }))
                       }
                     >
-                      <option value="customer">Customer</option>
-                      <option value="vendor">Vendor</option>
                       <option value="staff">Staff</option>
                     </select>
                   </div>
