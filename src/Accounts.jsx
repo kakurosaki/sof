@@ -18,7 +18,8 @@ function Accounts() {
     name: "",
     email: "",
     phone: "",
-    account_type: "customer",
+    account_type: "staff",
+    password: "",
   });
 
   async function loadAccounts(q = "") {
@@ -129,7 +130,13 @@ function Accounts() {
 
   function startCreate() {
     setEditingAccount(null);
-    setForm({ name: "", email: "", phone: "", account_type: "customer" });
+    setForm({
+      name: "",
+      email: "",
+      phone: "",
+      account_type: "staff",
+      password: "",
+    });
     setShowForm(true);
   }
 
@@ -139,7 +146,7 @@ function Accounts() {
       name: account.name || "",
       email: account.email || "",
       phone: account.phone || "",
-      account_type: account.account_type || "customer",
+      account_type: account.account_type || "staff",
     });
     setShowForm(true);
   }
@@ -148,6 +155,8 @@ function Accounts() {
     e.preventDefault();
     setError("");
 
+    const isEditing = Number.isFinite(editingAccount);
+
     const payload = {
       name: form.name.trim(),
       email: form.email.trim() || null,
@@ -155,13 +164,22 @@ function Accounts() {
       account_type: form.account_type,
     };
 
+    // Add password only for new accounts
+    if (!isEditing) {
+      payload.password = form.password;
+    }
+
     if (!payload.name) {
       setError("Account name is required");
       return;
     }
 
+    if (!isEditing && !payload.password) {
+      setError("Password is required for new accounts");
+      return;
+    }
+
     try {
-      const isEditing = Number.isFinite(editingAccount);
       const res = await fetch(
         isEditing ? `/api/accounts/${editingAccount}` : "/api/accounts",
         {
@@ -175,15 +193,19 @@ function Accounts() {
       if (!res.ok) throw new Error(json?.error || "Failed to save account");
 
       notify({
-        title: Number.isFinite(editingAccount)
-          ? "Account updated"
-          : "Account created",
+        title: isEditing ? "Account updated" : "Account created",
         message: `${payload.name} was saved successfully.`,
-        variant: Number.isFinite(editingAccount) ? "info" : "success",
+        variant: isEditing ? "info" : "success",
       });
       setShowForm(false);
       setEditingAccount(null);
-      setForm({ name: "", email: "", phone: "", account_type: "customer" });
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        account_type: "staff",
+        password: "",
+      });
       loadAccounts(search);
     } catch (err) {
       setError(err.message);
@@ -308,6 +330,7 @@ function Accounts() {
               <div className="modal-body">
                 <form className="row g-2" onSubmit={handleSubmit}>
                   <div className="col-md-4">
+                    <label className="form-label">Name *</label>
                     <input
                       className="form-control"
                       placeholder="Account Name"
@@ -318,6 +341,7 @@ function Accounts() {
                     />
                   </div>
                   <div className="col-md-3">
+                    <label className="form-label">Email</label>
                     <input
                       className="form-control"
                       placeholder="Email"
@@ -328,6 +352,7 @@ function Accounts() {
                     />
                   </div>
                   <div className="col-md-2">
+                    <label className="form-label">Phone</label>
                     <input
                       className="form-control"
                       placeholder="Phone"
@@ -338,6 +363,7 @@ function Accounts() {
                     />
                   </div>
                   <div className="col-md-3">
+                    <label className="form-label">Type</label>
                     <select
                       className="form-select"
                       value={form.account_type}
@@ -349,8 +375,26 @@ function Accounts() {
                       }
                     >
                       <option value="staff">Staff</option>
+                      <option value="admin">Admin</option>
                     </select>
                   </div>
+                  {!Number.isFinite(editingAccount) && (
+                    <div className="col-md-6">
+                      <label className="form-label">Password *</label>
+                      <input
+                        type="password"
+                        className="form-control"
+                        placeholder="Password"
+                        value={form.password}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            password: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
                   <div className="col-12 d-flex gap-2 justify-content-end mt-3">
                     <button className="btn btn-primary" type="submit">
                       {Number.isFinite(editingAccount) ? "Save" : "Add"}

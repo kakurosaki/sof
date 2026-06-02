@@ -45,6 +45,7 @@ router.get("/incoming", async (_req, res) => {
         po.created_at,
         p.sku,
         p.name AS product_name,
+        p.image_url,
         s.name AS supplier_name
       FROM purchase_orders po
       JOIN products p ON p.id = po.product_id
